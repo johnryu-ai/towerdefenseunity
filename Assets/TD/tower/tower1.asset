@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d77d7b5141ebcd438072a4f8d3d2438, type: 3}
   m_Name: tower1
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.TowerData
-  towerId: 
-  towerName: 
+  towerId: 0010
+  towerName: tower1
   attackAttribute: 0
   attackType: 0
-  targetType: 2
+  targetType: 0
   upgradeTiers: []
   assets:
     idleSprite: {fileID: 0}
     attackSprite: {fileID: 0}
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
-    projectilePrefab: {fileID: 0}
+    prefab: {fileID: 835261081465751510, guid: 7f39ba03c638e4a48b82a6a28475ce6c, type: 3}
+    projectilePrefab: {fileID: 3282063794203894837, guid: de65bb9b5c68ad94095485abbafeb682, type: 3}
     hitEffectPrefab: {fileID: 0}

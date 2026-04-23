@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 307021b62d8ca7c43bcf8988bd7daec3, type: 3}
   m_Name: monster1
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.MonsterData
-  monsterId: 
-  monsterName: 
+  monsterId: M0010
+  monsterName: monster1
   stats:
     moveSpeed: 1
     health: 100
@@ -29,4 +29,4 @@ MonoBehaviour:
     hitSprite: {fileID: 0}
     dieSprite: {fileID: 0}
     moveAnim: {fileID: 0}
-    prefab: {fileID: 0}
+    prefab: {fileID: 5462296911220689134, guid: cc64eaa1e5cb3014f96b98080e48924f, type: 3}

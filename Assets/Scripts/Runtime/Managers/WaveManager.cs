@@ -83,6 +83,10 @@ namespace TDF.Runtime.Managers
                         {
                             controller.Initialize(spawnInfo.monsterToSpawn, path);
                         }
+                        else
+                        {
+                            Debug.LogError($"[치명적 오류] 소환된 몬스터 프리팹 '{monsterObj.name}'에 'MonsterController' 스크립트가 안 붙어 있습니다! 스크립트가 없으면 몬스터는 절대 움직이지 않습니다.");
+                        }
                     }
 
                     if (i < spawnInfo.spawnCount - 1)

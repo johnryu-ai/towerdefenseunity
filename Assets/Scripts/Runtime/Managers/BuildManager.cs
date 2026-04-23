@@ -8,9 +8,6 @@ namespace TDF.Runtime.Managers
     {
         public static BuildManager Instance { get; private set; }
 
-        [Header("Test Towers (Press 1, 2, 3...)")]
-        public System.Collections.Generic.List<TowerData> availableTowers;
-
         private TowerData selectedTowerToBuild;
 
         // UI 팝업용 변수
@@ -29,11 +26,15 @@ namespace TDF.Runtime.Managers
             if (GameManager.Instance.CurrentState != GameState.Playing && GameManager.Instance.CurrentState != GameState.Ready) return;
 
             // 타워 선택 단축키 (키보드 1, 2, 3...)
-            if (Keyboard.current != null)
+            if (Keyboard.current != null && GameManager.Instance.currentMapData != null)
             {
-                if (Keyboard.current.digit1Key.wasPressedThisFrame && availableTowers.Count > 0) SelectTowerToBuild(availableTowers[0]);
-                if (Keyboard.current.digit2Key.wasPressedThisFrame && availableTowers.Count > 1) SelectTowerToBuild(availableTowers[1]);
-                if (Keyboard.current.digit3Key.wasPressedThisFrame && availableTowers.Count > 2) SelectTowerToBuild(availableTowers[2]);
+                var mapTowers = GameManager.Instance.currentMapData.config.availableTowers;
+                if (mapTowers != null)
+                {
+                    if (Keyboard.current.digit1Key.wasPressedThisFrame && mapTowers.Count > 0) selectedTowerToBuild = mapTowers[0];
+                    if (Keyboard.current.digit2Key.wasPressedThisFrame && mapTowers.Count > 1) selectedTowerToBuild = mapTowers[1];
+                    if (Keyboard.current.digit3Key.wasPressedThisFrame && mapTowers.Count > 2) selectedTowerToBuild = mapTowers[2];
+                }
             }
 
             // New Input System 마우스 클릭 처리
@@ -53,9 +54,19 @@ namespace TDF.Runtime.Managers
         {
             if (Mouse.current == null) return;
             
-            // UI를 누른 건지 판별하기 위해 (단순 테스트용이므로 임시로 넘김)
-            
             Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
+            
+            // 팝업이 띄워져 있을 때 클릭 처리
+            if (showTowerPopup)
+            {
+                Vector2 guiMousePos = new Vector2(mouseScreenPos.x, Screen.height - mouseScreenPos.y);
+                if (!popupRect.Contains(guiMousePos))
+                {
+                    showTowerPopup = false; // 팝업 바깥을 누르면 닫힘
+                }
+                return; // 팝업이 열려있으면 맵 클릭 무시
+            }
+
             Vector2 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
             
             if (Map.MapController.Instance != null && GameManager.Instance.currentMapData != null)
@@ -79,33 +90,45 @@ namespace TDF.Runtime.Managers
             }
         }
 
+        private Rect popupRect;
+
         private void OnGUI()
         {
             if (showTowerPopup)
             {
+                var availableTowers = GameManager.Instance.currentMapData.config.availableTowers;
                 int validTowers = 0;
-                foreach (var tower in availableTowers)
+                if (availableTowers != null)
                 {
-                    if (tower != null) validTowers++;
+                    foreach (var tower in availableTowers)
+                    {
+                        if (tower != null) validTowers++;
+                    }
                 }
                 
-                float popupHeight = 40f + (validTowers * 30f) + 40f; // 제목바 + 버튼들 + 취소버튼 + 여유공간
+                float popupHeight = 40f + (validTowers * 30f) + 40f; 
 
-                // 화면 바깥으로 나가지 않도록 조정
                 float px = Mathf.Clamp(popupPosition.x, 0, Screen.width - 160f);
                 float py = Mathf.Clamp(Screen.height - popupPosition.y, 0, Screen.height - popupHeight);
 
-                Rect rect = new Rect(px, py, 160f, popupHeight);
-                GUILayout.BeginArea(rect, "Select Tower", GUI.skin.window);
+                popupRect = new Rect(px, py, 160f, popupHeight);
+                GUILayout.BeginArea(popupRect, "Select Tower", GUI.skin.window);
                 
-                foreach (var tower in availableTowers)
+                if (validTowers == 0)
                 {
-                    if (tower == null) continue;
-                    if (GUILayout.Button(tower.towerName, GUILayout.Height(25f)))
+                    GUILayout.Label("사용 가능한 타워가\n없습니다.\n(MapData 확인 필요)");
+                }
+                else
+                {
+                    foreach (var tower in availableTowers)
                     {
-                        selectedTowerToBuild = tower;
-                        TryBuildTower(clickedX, clickedY);
-                        showTowerPopup = false;
+                        if (tower == null) continue;
+                        if (GUILayout.Button(tower.towerName, GUILayout.Height(25f)))
+                        {
+                            selectedTowerToBuild = tower;
+                            TryBuildTower(clickedX, clickedY);
+                            showTowerPopup = false;
+                        }
                     }
                 }
                 

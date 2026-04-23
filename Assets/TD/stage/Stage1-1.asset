@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: Stage1-1
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.StageData
   stageIndex: 0
-  linkedMapData: {fileID: 0}
+  linkedMapData: {fileID: 11400000, guid: ca8d39d7a0543f148ba2e32f08626365, type: 2}
   entryStory: []
   clearStory: []

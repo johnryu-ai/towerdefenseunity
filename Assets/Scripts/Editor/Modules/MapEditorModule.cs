@@ -49,6 +49,22 @@ namespace TDF.Editor.Modules
                 targetMap.ResizeGrid(newWidth, newHeight);
                 EditorUtility.SetDirty(targetMap);
             }
+
+            GUILayout.Space(10);
+            GUILayout.Label("Map Config", EditorStyles.boldLabel);
+            
+            // MapConfig 속성들을 직렬화 오브젝트로 그려줌 (리스트 편집을 쉽게 하기 위함)
+            SerializedObject serializedMap = new SerializedObject(targetMap);
+            SerializedProperty configProp = serializedMap.FindProperty("config");
+            if (configProp != null)
+            {
+                EditorGUI.BeginChangeCheck();
+                EditorGUILayout.PropertyField(configProp, new GUIContent("Game Rules"), true);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    serializedMap.ApplyModifiedProperties();
+                }
+            }
         }
 
         private void DrawBrushSettings()

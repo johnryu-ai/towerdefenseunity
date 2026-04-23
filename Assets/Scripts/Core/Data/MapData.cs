@@ -43,7 +43,7 @@ namespace TDF.Core.Data
         public List<SpawnPointData> spawnPoints = new List<SpawnPointData>();
 
         [Header("Config")]
-        public MapConfig config;
+        public MapConfig config = new MapConfig();
 
         [Header("Visuals")]
         public Sprite backgroundSprite;

@@ -55,6 +55,8 @@ namespace TDF.Runtime.Entities
                 spriteRenderer.sprite = data.assets.moveSprite;
             }
 
+            spriteRenderer.sortingOrder = 10; // 타일(0)보다 항상 위에 렌더링되도록 강제 설정
+
             statusEffects.ResetEffects();
         }
 

@@ -20,9 +20,15 @@ namespace TDF.Editor
                 camObj.tag = "MainCamera";
                 Camera cam = camObj.AddComponent<Camera>();
                 cam.orthographic = true;
-                cam.orthographicSize = 6f; // 12x8 맵이 잘 보이도록 줌 아웃
+                
+                // 세로 해상도가 1080일 때 타일 1개가 135px이 되려면: 1080 / 135 = 8칸.
+                // orthographicSize는 세로 길이의 절반이므로 4로 설정.
+                cam.orthographicSize = 4f; 
                 cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+                cam.backgroundColor = new Color(0.2f, 0.2f, 0.2f); // 회색 여백
+                
+                // 카메라를 화면 약간 아래로 내려서 (UI가 135px 차지) 맵을 정중앙에 맞출 수도 있지만, 
+                // 일단 정중앙 (0,0)을 바라보게 합니다.
                 camObj.transform.position = new Vector3(0, 0, -10);
             }
             

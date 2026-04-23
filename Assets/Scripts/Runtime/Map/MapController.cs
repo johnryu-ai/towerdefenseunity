@@ -28,6 +28,14 @@ namespace TDF.Runtime.Map
 
         private void Start()
         {
+            // 모바일 16:9 FHD(1920x1080) 대응: 1타일 135px -> 세로 8칸
+            if (Camera.main != null)
+            {
+                Camera.main.orthographic = true;
+                Camera.main.orthographicSize = 4f; 
+                Camera.main.backgroundColor = new Color(0.2f, 0.2f, 0.2f); // 남는 영역 회색
+            }
+
             // GameManager에서 초기화가 끝난 후 맵 데이터 연동
             if (GameManager.Instance != null && GameManager.Instance.currentMapData != null)
             {

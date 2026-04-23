@@ -17,12 +17,33 @@ MonoBehaviour:
   attackAttribute: 0
   attackType: 0
   targetType: 0
-  upgradeTiers: []
+  upgradeTiers:
+  - tierLevel: 0
+    buildOrUpgradeCost: 100
+    range: 10
+    damage: 10
+    attackSpeed: 1
+    sellPrice: 80
+    manaCost: 0
+  - tierLevel: 1
+    buildOrUpgradeCost: 100
+    range: 15
+    damage: 15
+    attackSpeed: 2
+    sellPrice: 160
+    manaCost: 0
+  - tierLevel: 2
+    buildOrUpgradeCost: 120
+    range: 20
+    damage: 20
+    attackSpeed: 3
+    sellPrice: 256
+    manaCost: 0
   assets:
     idleSprite: {fileID: 0}
     attackSprite: {fileID: 0}
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
-    prefab: {fileID: 835261081465751510, guid: 7f39ba03c638e4a48b82a6a28475ce6c, type: 3}
-    projectilePrefab: {fileID: 3282063794203894837, guid: de65bb9b5c68ad94095485abbafeb682, type: 3}
+    prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
+    projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
     hitEffectPrefab: {fileID: 0}

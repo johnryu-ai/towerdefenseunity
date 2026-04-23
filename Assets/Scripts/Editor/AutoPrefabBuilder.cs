@@ -55,6 +55,70 @@ namespace TDF.Editor
                 Debug.Log("✅ [성공] monster1.prefab을 자동 생성하고 MonsterController 스크립트를 부착했습니다!");
             }
 
+            // 2. 타워 프리팹 확인 및 생성
+            if (!AssetDatabase.IsValidFolder("Assets/TD/tower"))
+            {
+                AssetDatabase.CreateFolder("Assets/TD", "tower");
+            }
+
+            string towerPrefabPath = "Assets/TD/tower/tower1.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(towerPrefabPath) == null)
+            {
+                GameObject obj = new GameObject("tower1_prefab");
+                var sr = obj.AddComponent<SpriteRenderer>();
+                sr.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd"); 
+                sr.color = Color.cyan; // 타워는 청록색
+                sr.sortingOrder = 5;
+                
+                obj.AddComponent<TowerController>();
+                
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(obj, towerPrefabPath);
+                GameObject.DestroyImmediate(obj);
+
+                TowerData data = AssetDatabase.LoadAssetAtPath<TowerData>("Assets/TD/tower/tower1.asset");
+                if (data != null)
+                {
+                    if (data.assets == null) data.assets = new TowerAssets();
+                    data.assets.prefab = prefab;
+                    EditorUtility.SetDirty(data);
+                }
+                
+                createdAny = true;
+                Debug.Log("✅ [성공] tower1.prefab을 자동 생성하고 TowerController 스크립트를 부착했습니다!");
+            }
+
+            // 3. 발사체 프리팹 확인 및 생성
+            string projPrefabPath = "Assets/TD/tower/projectile1.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(projPrefabPath) == null)
+            {
+                GameObject obj = new GameObject("projectile1_prefab");
+                var sr = obj.AddComponent<SpriteRenderer>();
+                sr.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd"); // 둥근 모양
+                sr.color = Color.yellow; // 노란색 총알
+                sr.sortingOrder = 15;
+                
+                obj.AddComponent<ProjectileController>();
+                
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(obj, projPrefabPath);
+                GameObject.DestroyImmediate(obj);
+
+                TowerData data = AssetDatabase.LoadAssetAtPath<TowerData>("Assets/TD/tower/tower1.asset");
+                if (data != null)
+                {
+                    if (data.upgradeTiers == null) data.upgradeTiers = new System.Collections.Generic.List<TowerUpgradeTier>();
+                    if (data.upgradeTiers.Count == 0)
+                    {
+                        data.upgradeTiers.Add(new TowerUpgradeTier { range = 3f, attackSpeed = 1f, damage = 10f, buildOrUpgradeCost = 50 });
+                    }
+                    if (data.assets == null) data.assets = new TowerAssets();
+                    data.assets.projectilePrefab = prefab;
+                    EditorUtility.SetDirty(data);
+                }
+                
+                createdAny = true;
+                Debug.Log("✅ [성공] projectile1.prefab을 자동 생성하고 ProjectileController 스크립트를 부착했습니다!");
+            }
+
             if (createdAny)
             {
                 AssetDatabase.SaveAssets();

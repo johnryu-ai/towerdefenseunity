@@ -19,7 +19,8 @@ MonoBehaviour:
   config:
     initialGold: 100
     initialLives: 20
-    availableTowers: []
-    maxUpgradeLevel: 3
+    availableTowers:
+    - {fileID: 11400000, guid: b506d111092e6ef4982add2d506af6ec, type: 2}
+    maxUpgradeLevel: 2
   backgroundSprite: {fileID: 0}
   tileSprite: {fileID: 0}

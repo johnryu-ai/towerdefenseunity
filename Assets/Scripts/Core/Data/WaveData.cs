@@ -11,6 +11,9 @@ namespace TDF.Core.Data
         public int spawnCount;
         public float spawnInterval;
         public float startDelay;
+        
+        // 추가: 에디터에서 수동으로 입력할 수 있는 웨이포인트(이동 경로)
+        public List<Vector2> customWaypoints = new List<Vector2>();
     }
 
     [CreateAssetMenu(fileName = "NewWaveData", menuName = "TDF/Data/WaveData")]

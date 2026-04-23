@@ -7,8 +7,8 @@ namespace TDF.Runtime.Managers
     {
         public static ObjectPoolManager Instance { get; private set; }
 
-        // 프리팹 인스턴스 ID를 키로 사용하는 풀 딕셔너리
-        private Dictionary<int, Queue<GameObject>> poolDictionary = new Dictionary<int, Queue<GameObject>>();
+        // 프리팹 인스턴스를 키로 사용하는 풀 딕셔너리
+        private Dictionary<GameObject, Queue<GameObject>> poolDictionary = new Dictionary<GameObject, Queue<GameObject>>();
         private Transform poolContainer;
 
         private void Awake()
@@ -29,19 +29,17 @@ namespace TDF.Runtime.Managers
         {
             if (prefab == null) return null;
 
-            int prefabId = prefab.GetInstanceID();
-
-            if (!poolDictionary.ContainsKey(prefabId))
+            if (!poolDictionary.ContainsKey(prefab))
             {
-                poolDictionary[prefabId] = new Queue<GameObject>();
+                poolDictionary[prefab] = new Queue<GameObject>();
             }
 
             GameObject objectToSpawn = null;
 
             // 풀에 사용 가능한 오브젝트가 있는지 확인
-            while (poolDictionary[prefabId].Count > 0)
+            while (poolDictionary[prefab].Count > 0)
             {
-                GameObject obj = poolDictionary[prefabId].Dequeue();
+                GameObject obj = poolDictionary[prefab].Dequeue();
                 if (obj != null) // 혹시 파괴된 오브젝트가 들어있을 경우 대비
                 {
                     objectToSpawn = obj;
@@ -70,14 +68,12 @@ namespace TDF.Runtime.Managers
             obj.SetActive(false);
             obj.transform.SetParent(poolContainer);
 
-            int prefabId = prefabOrigin.GetInstanceID();
-
-            if (!poolDictionary.ContainsKey(prefabId))
+            if (!poolDictionary.ContainsKey(prefabOrigin))
             {
-                poolDictionary[prefabId] = new Queue<GameObject>();
+                poolDictionary[prefabOrigin] = new Queue<GameObject>();
             }
 
-            poolDictionary[prefabId].Enqueue(obj);
+            poolDictionary[prefabOrigin].Enqueue(obj);
         }
     }
 }

@@ -113,6 +113,29 @@ namespace TDF.Editor.Modules
                     Undo.RecordObject(targetWave, "Edit Spawn Event");
                 }
                 
+                GUILayout.Space(5);
+                EditorGUILayout.LabelField("Custom Waypoints (선택사항)", EditorStyles.boldLabel);
+                if (seq.customWaypoints == null) seq.customWaypoints = new System.Collections.Generic.List<Vector2>();
+                int wpCount = Mathf.Max(0, EditorGUILayout.IntField("Path Size", seq.customWaypoints.Count));
+                
+                if (wpCount != seq.customWaypoints.Count)
+                {
+                    Undo.RecordObject(targetWave, "Resize Custom Waypoints");
+                    while (seq.customWaypoints.Count < wpCount) seq.customWaypoints.Add(Vector2.zero);
+                    while (seq.customWaypoints.Count > wpCount) seq.customWaypoints.RemoveAt(seq.customWaypoints.Count - 1);
+                }
+                
+                for (int j = 0; j < seq.customWaypoints.Count; j++)
+                {
+                    EditorGUI.BeginChangeCheck();
+                    Vector2 newWp = EditorGUILayout.Vector2Field($"Point {j}", seq.customWaypoints[j]);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(targetWave, "Edit Custom Waypoint");
+                        seq.customWaypoints[j] = newWp;
+                    }
+                }
+
                 GUILayout.EndVertical();
             }
 

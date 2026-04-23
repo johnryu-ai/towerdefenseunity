@@ -132,6 +132,7 @@ namespace TDF.Editor.Modules
             assets.attackSprite = (Sprite)EditorGUILayout.ObjectField("Attack Sprite", assets.attackSprite, typeof(Sprite), false);
             assets.idleAnim = (AnimationClip)EditorGUILayout.ObjectField("Idle Anim", assets.idleAnim, typeof(AnimationClip), false);
             assets.attackAnim = (AnimationClip)EditorGUILayout.ObjectField("Attack Anim", assets.attackAnim, typeof(AnimationClip), false);
+            assets.prefab = (GameObject)EditorGUILayout.ObjectField("Tower Prefab", assets.prefab, typeof(GameObject), false);
             assets.projectilePrefab = (GameObject)EditorGUILayout.ObjectField("Projectile Prefab", assets.projectilePrefab, typeof(GameObject), false);
             assets.hitEffectPrefab = (GameObject)EditorGUILayout.ObjectField("Hit Effect Prefab", assets.hitEffectPrefab, typeof(GameObject), false);
 

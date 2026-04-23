@@ -17,8 +17,20 @@ namespace TDF.Runtime.Entities
         private List<Vector2> waypoints;
         private int currentWaypointIndex;
 
+        public static List<MonsterController> ActiveMonsters = new List<MonsterController>();
+
         // 최적화를 위한 캐싱
         private Transform cachedTransform;
+
+        private void OnEnable()
+        {
+            if (!ActiveMonsters.Contains(this)) ActiveMonsters.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            ActiveMonsters.Remove(this);
+        }
 
         private void Awake()
         {

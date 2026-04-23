@@ -12,8 +12,6 @@ namespace TDF.Runtime.Entities
         private float attackTimer = 0f;
         private MonsterController currentTarget;
 
-        // 성능 최적화: 매 프레임 OverlapCircleAll을 피하기 위해 NonAlloc 사용
-        private Collider2D[] results = new Collider2D[20];
         private float searchTimer = 0f;
         private const float SEARCH_INTERVAL = 0.2f;
 
@@ -69,19 +67,17 @@ namespace TDF.Runtime.Entities
 
         private void FindTarget(float range)
         {
-            // Physics2D.OverlapCircleNonAlloc를 사용하여 가비지 컬렉션(GC) 방지
-            int count = Physics2D.OverlapCircleNonAlloc(cachedTransform.position, range, results);
-            
             float closestDistance = float.MaxValue;
             MonsterController closestMonster = null;
+            float sqrRange = range * range;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < MonsterController.ActiveMonsters.Count; i++)
             {
-                MonsterController monster = results[i].GetComponent<MonsterController>();
+                var monster = MonsterController.ActiveMonsters[i];
                 if (monster != null && monster.gameObject.activeInHierarchy)
                 {
                     float dist = Vector2.SqrMagnitude(cachedTransform.position - monster.transform.position);
-                    if (dist < closestDistance)
+                    if (dist <= sqrRange && dist < closestDistance)
                     {
                         closestDistance = dist;
                         closestMonster = monster;

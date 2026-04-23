@@ -26,6 +26,7 @@ namespace TDF.Core.Data
         public Sprite attackSprite;
         public AnimationClip idleAnim;
         public AnimationClip attackAnim;
+        public GameObject prefab;
         public GameObject projectilePrefab;
         public GameObject hitEffectPrefab;
     }

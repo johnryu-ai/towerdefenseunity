@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using TDF.Core.Data;
 
 namespace TDF.Runtime.Managers
@@ -14,15 +15,26 @@ namespace TDF.Runtime.Managers
 
         [Header("Current Stage Data")]
         public StageData currentStageData;
-        private List<WaveData> stageWaves = new List<WaveData>(); // 임시: StageData가 WaveData 리스트를 갖도록 구조 확장이 필요하거나, 별도로 로드
+        
+        [Header("Test Mode")]
+        public WaveData testWaveData; // 테스트용 단일 웨이브 데이터
 
-        private int currentWaveIndex = 0;
         private bool isWaveRunning = false;
 
         private void Awake()
         {
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
+        }
+
+        private void Update()
+        {
+            // 테스트용 웨이브 시작 단축키 (Space)
+            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+            {
+                if (testWaveData != null) StartWave(testWaveData);
+                else Debug.LogWarning("WaveManager: 할당된 Test Wave Data가 없습니다!");
+            }
         }
 
         public void StartWave(WaveData wave)
@@ -44,29 +56,34 @@ namespace TDF.Runtime.Managers
 
                 yield return new WaitForSeconds(spawnInfo.startDelay);
 
-                // MapData에서 스폰 좌표 획득
-                Vector3 spawnPos = Vector3.zero; // 기본값
-                if (GameManager.Instance.currentMapData != null)
+                // WaveData에 직접 설정한 경로가 있으면 우선 사용, 없으면 MapController 자동 탐색 사용
+                List<Vector2> path = (spawnInfo.customWaypoints != null && spawnInfo.customWaypoints.Count > 0) 
+                    ? spawnInfo.customWaypoints 
+                    : Map.MapController.Instance.GetPath();
+
+                if (path == null || path.Count == 0)
                 {
-                    var spawnPointList = GameManager.Instance.currentMapData.spawnPoints;
-                    var targetSpawn = spawnPointList.Find(sp => sp.spawnIndex == spawnInfo.spawnPointIndex);
-                    if (targetSpawn != null)
-                    {
-                        // MapController를 통해 실제 월드 좌표 획득하는 로직 연동
-                        // 임시: spawnPos = MapController.Instance.GetWorldPosition(targetSpawn.coordinate.x, targetSpawn.coordinate.y);
-                    }
+                    Debug.LogWarning("WaveManager: 몬스터 이동 경로를 찾을 수 없습니다! 맵에 Spawn/Base 타일이 없거나 경로가 끊겼는지 확인하세요.");
                 }
+
+                Vector3 spawnPos = (path != null && path.Count > 0) ? (Vector3)path[0] : Vector3.zero;
 
                 for (int i = 0; i < spawnInfo.spawnCount; i++)
                 {
-                    // 오브젝트 풀을 통한 몬스터 생성
                     GameObject monsterObj = ObjectPoolManager.Instance.SpawnFromPool(
                         spawnInfo.monsterToSpawn.assets.prefab, 
                         spawnPos, 
                         Quaternion.identity
                     );
 
-                    // TODO: monsterObj.GetComponent<MonsterController>().Initialize(spawnInfo.monsterToSpawn);
+                    if (monsterObj != null)
+                    {
+                        var controller = monsterObj.GetComponent<Entities.MonsterController>();
+                        if (controller != null)
+                        {
+                            controller.Initialize(spawnInfo.monsterToSpawn, path);
+                        }
+                    }
 
                     if (i < spawnInfo.spawnCount - 1)
                         yield return new WaitForSeconds(spawnInfo.spawnInterval);

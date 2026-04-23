@@ -20,6 +20,9 @@ namespace TDF.Runtime.Managers
         public WaveData testWaveData; // 테스트용 단일 웨이브 데이터
 
         private bool isWaveRunning = false;
+        
+        public int CurrentWaveIndex { get; private set; } = 0;
+        public int TotalWaves => currentStageData != null && currentStageData.waves != null ? currentStageData.waves.Count : (testWaveData != null ? 1 : 0);
 
         private void Awake()
         {
@@ -34,6 +37,24 @@ namespace TDF.Runtime.Managers
             {
                 if (testWaveData != null) StartWave(testWaveData);
                 else Debug.LogWarning("WaveManager: 할당된 Test Wave Data가 없습니다!");
+            }
+        }
+
+        public void StartNextWave()
+        {
+            if (isWaveRunning) return;
+
+            if (currentStageData != null && currentStageData.waves != null && CurrentWaveIndex < currentStageData.waves.Count)
+            {
+                StartWave(currentStageData.waves[CurrentWaveIndex]);
+            }
+            else if (testWaveData != null && CurrentWaveIndex == 0)
+            {
+                StartWave(testWaveData);
+            }
+            else
+            {
+                Debug.Log("모든 웨이브가 완료되었습니다!");
             }
         }
 
@@ -104,6 +125,7 @@ namespace TDF.Runtime.Managers
         {
             isWaveRunning = false;
             GameManager.Instance.AddGold(wave.clearReward);
+            CurrentWaveIndex++;
             OnRoundCleared?.Invoke(wave.roundNumber);
 
             // 다음 라운드 자동 시작 로직이 있다면 nextRoundDelay 이후 호출

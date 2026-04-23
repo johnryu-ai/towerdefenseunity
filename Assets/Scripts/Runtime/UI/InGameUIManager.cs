@@ -1,106 +1,74 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TDF.Runtime.Managers;
 
 namespace TDF.Runtime.UI
 {
     public class InGameUIManager : MonoBehaviour
     {
-        [Header("UI Text References")]
-        public Text hpText;
-        public Text goldText;
-        public Text roundText;
-        public Text statusText;
-
-        [Header("UI Buttons")]
-        public Button speedUpButton;
-        public Button pauseButton;
-
         private float currentSpeed = 1f;
 
-        private void Start()
+        private void OnGUI()
         {
-            // 이벤트 구독 (GameManager가 먼저 초기화되었다고 가정하거나, 콜백으로 처리)
-            if (Managers.GameManager.Instance != null)
+            if (GameManager.Instance == null || WaveManager.Instance == null) return;
+
+            // 상단 바 배경 박스 그리기
+            GUILayout.BeginArea(new Rect(0, 0, Screen.width, 50), GUI.skin.box);
+            GUILayout.BeginHorizontal();
+
+            // 스타일 설정
+            GUIStyle textStyle = new GUIStyle(GUI.skin.label);
+            textStyle.fontSize = 20;
+            textStyle.alignment = TextAnchor.MiddleLeft;
+            textStyle.normal.textColor = Color.white;
+
+            GUIStyle buttonStyle = new GUIStyle(GUI.skin.button);
+            buttonStyle.fontSize = 16;
+            buttonStyle.alignment = TextAnchor.MiddleCenter;
+
+            // 1. 현재 골드 표시
+            GUILayout.Label($"💰 Gold: {GameManager.Instance.CurrentGold}", textStyle, GUILayout.Width(150), GUILayout.Height(40));
+
+            // 2. 기지 생명력 표시
+            GUILayout.Label($"❤️ HP: {GameManager.Instance.CurrentHP}", textStyle, GUILayout.Width(130), GUILayout.Height(40));
+
+            // 3. 웨이브 상황 표시 (예: 1 / 10)
+            int currentWave = WaveManager.Instance.CurrentWaveIndex + 1;
+            int totalWaves = WaveManager.Instance.TotalWaves;
+            if (totalWaves == 0) totalWaves = 1; 
+            if (currentWave > totalWaves) currentWave = totalWaves; 
+
+            GUILayout.Label($"⚔️ Wave: {currentWave} / {totalWaves}", textStyle, GUILayout.Width(160), GUILayout.Height(40));
+
+            // 빈 공간 채우기 (버튼들을 우측으로 밀어냄)
+            GUILayout.FlexibleSpace();
+
+            // 4. 다음 웨이브 부르기 버튼
+            if (GUILayout.Button("Next Wave", buttonStyle, GUILayout.Width(120), GUILayout.Height(40)))
             {
-                Managers.GameManager.Instance.OnHPChanged += UpdateHP;
-                Managers.GameManager.Instance.OnGoldChanged += UpdateGold;
-                Managers.GameManager.Instance.OnGameStateChanged += UpdateGameState;
-                
-                // 초기값 강제 갱신
-                UpdateHP(Managers.GameManager.Instance.CurrentHP);
-                UpdateGold(Managers.GameManager.Instance.CurrentGold);
+                WaveManager.Instance.StartNextWave();
             }
 
-            if (Managers.WaveManager.Instance != null)
-            {
-                Managers.WaveManager.Instance.OnRoundStarted += UpdateRound;
-            }
+            GUILayout.Space(10);
 
-            if (speedUpButton != null) speedUpButton.onClick.AddListener(ToggleSpeed);
-            if (pauseButton != null) pauseButton.onClick.AddListener(TogglePause);
-        }
-
-        private void OnDestroy()
-        {
-            if (Managers.GameManager.Instance != null)
+            // 5. 속도 조절 버튼 (1x, 2x, 3x)
+            if (GUILayout.Button($"Speed: {currentSpeed}x", buttonStyle, GUILayout.Width(100), GUILayout.Height(40)))
             {
-                Managers.GameManager.Instance.OnHPChanged -= UpdateHP;
-                Managers.GameManager.Instance.OnGoldChanged -= UpdateGold;
-                Managers.GameManager.Instance.OnGameStateChanged -= UpdateGameState;
+                currentSpeed += 1f;
+                if (currentSpeed > 3f) currentSpeed = 1f;
+                Time.timeScale = currentSpeed;
             }
             
-            if (Managers.WaveManager.Instance != null)
-            {
-                Managers.WaveManager.Instance.OnRoundStarted -= UpdateRound;
-            }
-        }
-
-        private void UpdateHP(int hp)
-        {
-            if (hpText != null) hpText.text = $"HP: {hp}";
-        }
-
-        private void UpdateGold(int gold)
-        {
-            if (goldText != null) goldText.text = $"Gold: {gold}";
-        }
-
-        private void UpdateRound(int round)
-        {
-            if (roundText != null) roundText.text = $"Round: {round}";
-        }
-
-        private void UpdateGameState(Managers.GameState state)
-        {
-            if (statusText != null)
-            {
-                statusText.text = state.ToString();
-                statusText.gameObject.SetActive(state != Managers.GameState.Playing);
-            }
-        }
-
-        private void ToggleSpeed()
-        {
-            if (Managers.GameManager.Instance.CurrentState != Managers.GameState.Playing) return;
-
-            currentSpeed = (currentSpeed == 1f) ? 2f : 1f;
-            Time.timeScale = currentSpeed;
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
             
-            // Text 갱신 (예: Button 자식 컴포넌트)
-            var btnText = speedUpButton.GetComponentInChildren<Text>();
-            if (btnText != null) btnText.text = $"x{currentSpeed}";
-        }
-
-        private void TogglePause()
-        {
-            var state = Managers.GameManager.Instance.CurrentState;
-            if (state == Managers.GameState.Playing)
+            // 게임 상태 오버레이 (일시정지 또는 게임오버 시)
+            if (GameManager.Instance.CurrentState == GameState.GameOver)
             {
-                Managers.GameManager.Instance.ChangeState(Managers.GameState.Paused);
-            }
-            else if (state == Managers.GameState.Paused)
-            {
-                Managers.GameManager.Instance.ChangeState(Managers.GameState.Playing);
+                GUIStyle centerStyle = new GUIStyle(GUI.skin.label);
+                centerStyle.fontSize = 50;
+                centerStyle.alignment = TextAnchor.MiddleCenter;
+                centerStyle.normal.textColor = Color.red;
+                GUI.Label(new Rect(0, 0, Screen.width, Screen.height), "GAME OVER", centerStyle);
             }
         }
     }

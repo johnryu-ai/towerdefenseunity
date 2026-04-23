@@ -15,6 +15,11 @@ namespace TDF.Runtime.Managers
         private Vector2 popupPosition;
         private int clickedX, clickedY;
 
+        // 업그레이드 UI 및 타워 관리용
+        private Entities.TowerController selectedBuiltTower;
+        private bool showUpgradePopup = false;
+        private System.Collections.Generic.Dictionary<Vector2Int, Entities.TowerController> builtTowers = new System.Collections.Generic.Dictionary<Vector2Int, Entities.TowerController>();
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -57,14 +62,22 @@ namespace TDF.Runtime.Managers
             Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
             
             // 팝업이 띄워져 있을 때 클릭 처리
-            if (showTowerPopup)
+            if (showTowerPopup || showUpgradePopup)
             {
                 Vector2 guiMousePos = new Vector2(mouseScreenPos.x, Screen.height - mouseScreenPos.y);
-                if (!popupRect.Contains(guiMousePos))
+                if (showTowerPopup && !popupRect.Contains(guiMousePos))
                 {
-                    showTowerPopup = false; // 팝업 바깥을 누르면 닫힘
+                    showTowerPopup = false;
                 }
-                return; // 팝업이 열려있으면 맵 클릭 무시
+                else if (showUpgradePopup && !popupRect.Contains(guiMousePos))
+                {
+                    // 마우스가 타워 자체를 클릭한 경우 TowerController.OnMouseDown이 처리하도록 둠
+                    // 여기서는 팝업 외부를 클릭했을 때 팝업만 닫음
+                    showUpgradePopup = false;
+                    if (selectedBuiltTower != null) selectedBuiltTower.Deselect();
+                    selectedBuiltTower = null;
+                }
+                return; // 팝업이 열려있으면 맵 짓기 클릭 무시
             }
 
             Vector2 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
@@ -80,14 +93,49 @@ namespace TDF.Runtime.Managers
                     TileType type = GameManager.Instance.currentMapData.GetTileAt(x, y);
                     if (type == TileType.Buildable)
                     {
-                        // 팝업 열기
+                        // 건설 팝업 열기
                         showTowerPopup = true;
+                        showUpgradePopup = false;
+                        if (selectedBuiltTower != null) selectedBuiltTower.Deselect();
+                        selectedBuiltTower = null;
+
                         popupPosition = mouseScreenPos;
                         clickedX = x;
                         clickedY = y;
                     }
+                    else if (type == TileType.NonBuildable)
+                    {
+                        // 이미 지어진 타워가 있는지 확인
+                        Vector2Int gridPos = new Vector2Int(x, y);
+                        if (builtTowers.ContainsKey(gridPos))
+                        {
+                            SelectBuiltTower(builtTowers[gridPos]);
+                        }
+                    }
                 }
             }
+        }
+
+        public void SelectBuiltTower(Entities.TowerController tower)
+        {
+            if (selectedBuiltTower != null && selectedBuiltTower != tower)
+            {
+                selectedBuiltTower.Deselect();
+            }
+            selectedBuiltTower = tower;
+            selectedBuiltTower.Select(); // 타워 시각 효과 켜기
+            showUpgradePopup = true;
+            showTowerPopup = false; // 건설 팝업은 닫음
+            
+            // 타워 머리 위에 팝업 띄우기
+            Vector3 screenPos = Camera.main.WorldToScreenPoint(tower.transform.position);
+            popupPosition = new Vector2(screenPos.x, screenPos.y);
+        }
+
+        public void DeselectBuiltTower()
+        {
+            showUpgradePopup = false;
+            selectedBuiltTower = null;
         }
 
         private Rect popupRect;
@@ -137,6 +185,69 @@ namespace TDF.Runtime.Managers
                 
                 GUILayout.EndArea();
             }
+            else if (showUpgradePopup && selectedBuiltTower != null)
+            {
+                TowerData data = selectedBuiltTower.GetData();
+                int currentTier = selectedBuiltTower.GetCurrentTierIndex();
+                
+                float popupHeight = 120f; 
+                float px = Mathf.Clamp(popupPosition.x, 0, Screen.width - 160f);
+                float py = Mathf.Clamp(Screen.height - popupPosition.y - 100f, 0, Screen.height - popupHeight); // 타워 약간 위쪽
+
+                popupRect = new Rect(px, py, 160f, popupHeight);
+                GUILayout.BeginArea(popupRect, data.towerName, GUI.skin.window);
+                
+                bool isMaxLevel = currentTier >= data.upgradeTiers.Count - 1;
+                
+                // 업그레이드 버튼
+                if (!isMaxLevel)
+                {
+                    int upgradeCost = data.upgradeTiers[currentTier + 1].buildOrUpgradeCost;
+                    bool canAfford = GameManager.Instance.CurrentGold >= upgradeCost;
+                    
+                    GUI.enabled = canAfford;
+                    if (GUILayout.Button($"Upgrade (-{upgradeCost}G)", GUILayout.Height(30f)))
+                    {
+                        selectedBuiltTower.UpgradeTower();
+                    }
+                    GUI.enabled = true;
+                }
+                else
+                {
+                    GUI.enabled = false;
+                    GUILayout.Button("Max Level", GUILayout.Height(30f));
+                    GUI.enabled = true;
+                }
+
+                GUILayout.Space(5);
+
+                // 판매 (릴리즈) 버튼
+                int sellPrice = data.upgradeTiers[currentTier].sellPrice;
+                if (GUILayout.Button($"Sell (+{sellPrice}G)", GUILayout.Height(30f)))
+                {
+                    GameManager.Instance.AddGold(sellPrice);
+                    
+                    int gx = selectedBuiltTower.GridX;
+                    int gy = selectedBuiltTower.GridY;
+                    
+                    // 타일 원상복구
+                    GameManager.Instance.currentMapData.SetTileAt(gx, gy, TileType.Buildable);
+                    Map.MapController.Instance.UpdateTileColor(gx, gy);
+                    
+                    builtTowers.Remove(new Vector2Int(gx, gy));
+                    Destroy(selectedBuiltTower.gameObject);
+                    DeselectBuiltTower();
+                }
+
+                GUILayout.Space(5);
+                if (GUILayout.Button("Close", GUILayout.Height(25f))) 
+                {
+                    selectedBuiltTower.Deselect();
+                    DeselectBuiltTower();
+                }
+
+                GUILayout.EndArea();
+            }
         }
 
         private void TryBuildTower(int x, int y)
@@ -154,7 +265,8 @@ namespace TDF.Runtime.Managers
                     var towerController = towerObj.GetComponent<Entities.TowerController>();
                     if (towerController != null)
                     {
-                        towerController.Initialize(selectedTowerToBuild);
+                        towerController.Initialize(selectedTowerToBuild, x, y);
+                        builtTowers[new Vector2Int(x, y)] = towerController;
                     }
 
                     GameManager.Instance.currentMapData.SetTileAt(x, y, TileType.NonBuildable);

@@ -23,5 +23,8 @@ namespace TDF.Core.Data
         [Header("Narrative")]
         public List<StoryMoment> entryStory = new List<StoryMoment>();
         public List<StoryMoment> clearStory = new List<StoryMoment>();
+
+        [Header("Waves")]
+        public List<WaveData> waves = new List<WaveData>();
     }
 }

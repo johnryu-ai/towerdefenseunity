@@ -17,10 +17,91 @@ namespace TDF.Runtime.Entities
 
         private Transform cachedTransform;
 
-        public void Initialize(TowerData towerData)
+        // 선택 및 사거리 시각화
+        private bool isSelected = false;
+        private LineRenderer currentRangeLine;
+        private LineRenderer nextRangeLine;
+
+        private void Awake()
+        {
+            // 사거리 원 그리기용 LineRenderer 생성
+            currentRangeLine = CreateRangeCircle("CurrentRange", Color.green);
+            nextRangeLine = CreateRangeCircle("NextRange", Color.yellow);
+        }
+
+        private LineRenderer CreateRangeCircle(string name, Color color)
+        {
+            GameObject obj = new GameObject(name);
+            obj.transform.SetParent(transform);
+            obj.transform.localPosition = Vector3.zero;
+
+            LineRenderer lr = obj.AddComponent<LineRenderer>();
+            lr.startWidth = 0.5f;
+            lr.endWidth = 0.5f;
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.startColor = color;
+            lr.endColor = color;
+            lr.useWorldSpace = false;
+            lr.positionCount = 51; // 원을 그릴 점의 갯수
+            lr.sortingOrder = 20;
+            lr.gameObject.SetActive(false);
+
+            return lr;
+        }
+
+        public TowerData GetData() => data;
+        public int GetCurrentTierIndex() => currentTierIndex;
+
+        public void Deselect()
+        {
+            isSelected = false;
+            currentRangeLine.gameObject.SetActive(false);
+            nextRangeLine.gameObject.SetActive(false);
+        }
+
+        public void Select()
+        {
+            isSelected = true;
+            if (data != null && data.upgradeTiers != null)
+            {
+                // 현재 사거리 그리기
+                float currentRange = data.upgradeTiers[currentTierIndex].range;
+                UpdateCircle(currentRangeLine, currentRange);
+                currentRangeLine.gameObject.SetActive(true);
+
+                // 다음 업그레이드 사거리 그리기 (존재할 경우)
+                if (currentTierIndex < data.upgradeTiers.Count - 1)
+                {
+                    float nextRange = data.upgradeTiers[currentTierIndex + 1].range;
+                    UpdateCircle(nextRangeLine, nextRange);
+                    nextRangeLine.gameObject.SetActive(true);
+                }
+            }
+        }
+
+        private void UpdateCircle(LineRenderer lr, float radius)
+        {
+            float x, y;
+            float angle = 0f;
+            for (int i = 0; i < 51; i++)
+            {
+                x = Mathf.Sin(Mathf.Deg2Rad * angle) * radius;
+                y = Mathf.Cos(Mathf.Deg2Rad * angle) * radius;
+                lr.SetPosition(i, new Vector3(x, y, 0));
+                angle += (360f / 50f);
+            }
+        }
+
+        // 맵 그리드 좌표
+        public int GridX { get; private set; }
+        public int GridY { get; private set; }
+
+        public void Initialize(TowerData towerData, int gridX, int gridY)
         {
             data = towerData;
             currentTierIndex = 0;
+            GridX = gridX;
+            GridY = gridY;
             cachedTransform = transform;
             
             if (data.assets != null && data.assets.idleSprite != null)

@@ -25,6 +25,6 @@ namespace TDF.Core.Data
         public List<StoryMoment> clearStory = new List<StoryMoment>();
 
         [Header("Waves")]
-        public List<WaveData> waves = new List<WaveData>();
+        public WaveData waveData;
     }
 }

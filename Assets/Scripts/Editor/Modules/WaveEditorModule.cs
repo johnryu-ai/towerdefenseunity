@@ -8,6 +8,7 @@ namespace TDF.Editor.Modules
     {
         private WaveData targetWave;
         private Vector2 scrollPos;
+        private int expandedRoundIndex = -1;
 
         public void Draw()
         {
@@ -23,9 +24,9 @@ namespace TDF.Editor.Modules
 
             scrollPos = GUILayout.BeginScrollView(scrollPos);
 
-            DrawRoundInfo();
+            DrawTopLevelInfo();
             GUILayout.Space(15);
-            DrawSpawnSequence();
+            DrawRounds();
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
@@ -36,70 +37,145 @@ namespace TDF.Editor.Modules
             }
         }
 
-        private void DrawRoundInfo()
+        private void DrawTopLevelInfo()
         {
-            GUILayout.Label("Round Information", EditorStyles.boldLabel);
+            GUILayout.Label("General Settings", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
             
-            int newRoundNum = EditorGUILayout.IntField("Round Number", targetWave.roundNumber);
             MapData newLinkedMap = (MapData)EditorGUILayout.ObjectField("Linked Map", targetWave.linkedMapData, typeof(MapData), false);
-            int newReward = EditorGUILayout.IntField("Clear Reward (Gold)", targetWave.clearReward);
-            float newDelay = EditorGUILayout.FloatField("Next Round Delay", targetWave.nextRoundDelay);
 
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(targetWave, "Edit Wave Round Info");
-                targetWave.roundNumber = newRoundNum;
+                Undo.RecordObject(targetWave, "Edit Wave Top Level Info");
                 targetWave.linkedMapData = newLinkedMap;
-                targetWave.clearReward = newReward;
-                targetWave.nextRoundDelay = newDelay;
             }
         }
 
-        private void DrawSpawnSequence()
+        private void DrawRounds()
         {
-            GUILayout.Label("Spawn Sequence Timeline", EditorStyles.boldLabel);
+            GUILayout.Label("Rounds (Waves) Sequence", EditorStyles.boldLabel);
             
-            for (int i = 0; i < targetWave.spawnSequence.Count; i++)
+            if (targetWave.rounds == null) targetWave.rounds = new System.Collections.Generic.List<WaveRound>();
+
+            for (int i = 0; i < targetWave.rounds.Count; i++)
             {
                 GUILayout.BeginVertical("box");
                 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"Spawn Event #{i}", EditorStyles.boldLabel, GUILayout.Width(150));
-                
-                // 순서 변경 버튼
-                if (GUILayout.Button("▲", GUILayout.Width(30)) && i > 0)
+                string title = $"Round {targetWave.rounds[i].roundNumber} (Reward: {targetWave.rounds[i].clearReward})";
+                if (GUILayout.Button(expandedRoundIndex == i ? "▼ " + title : "▶ " + title, EditorStyles.boldLabel))
                 {
-                    Undo.RecordObject(targetWave, "Move Spawn Event Up");
-                    var temp = targetWave.spawnSequence[i];
-                    targetWave.spawnSequence[i] = targetWave.spawnSequence[i - 1];
-                    targetWave.spawnSequence[i - 1] = temp;
-                    break;
-                }
-                if (GUILayout.Button("▼", GUILayout.Width(30)) && i < targetWave.spawnSequence.Count - 1)
-                {
-                    Undo.RecordObject(targetWave, "Move Spawn Event Down");
-                    var temp = targetWave.spawnSequence[i];
-                    targetWave.spawnSequence[i] = targetWave.spawnSequence[i + 1];
-                    targetWave.spawnSequence[i + 1] = temp;
-                    break;
+                    if (expandedRoundIndex == i) expandedRoundIndex = -1;
+                    else expandedRoundIndex = i;
                 }
 
-                if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                if (GUILayout.Button("▲", GUILayout.Width(25)) && i > 0)
                 {
-                    Undo.RecordObject(targetWave, "Remove Spawn Event");
-                    targetWave.spawnSequence.RemoveAt(i);
+                    Undo.RecordObject(targetWave, "Move Round Up");
+                    var temp = targetWave.rounds[i];
+                    targetWave.rounds[i] = targetWave.rounds[i - 1];
+                    targetWave.rounds[i - 1] = temp;
+                    expandedRoundIndex = -1;
+                    break;
+                }
+                if (GUILayout.Button("▼", GUILayout.Width(25)) && i < targetWave.rounds.Count - 1)
+                {
+                    Undo.RecordObject(targetWave, "Move Round Down");
+                    var temp = targetWave.rounds[i];
+                    targetWave.rounds[i] = targetWave.rounds[i + 1];
+                    targetWave.rounds[i + 1] = temp;
+                    expandedRoundIndex = -1;
+                    break;
+                }
+                if (GUILayout.Button("X", GUILayout.Width(25)))
+                {
+                    Undo.RecordObject(targetWave, "Remove Round");
+                    targetWave.rounds.RemoveAt(i);
+                    expandedRoundIndex = -1;
+                    break;
+                }
+                GUILayout.EndHorizontal();
+
+                if (expandedRoundIndex == i)
+                {
+                    DrawRoundDetails(targetWave.rounds[i]);
+                }
+
+                GUILayout.EndVertical();
+            }
+
+            GUILayout.Space(5);
+            if (GUILayout.Button("Add New Round", GUILayout.Height(30)))
+            {
+                Undo.RecordObject(targetWave, "Add Round");
+                int newRoundNum = targetWave.rounds.Count > 0 ? targetWave.rounds[targetWave.rounds.Count - 1].roundNumber + 1 : 1;
+                targetWave.rounds.Add(new WaveRound { roundNumber = newRoundNum, nextRoundDelay = 5f });
+                expandedRoundIndex = targetWave.rounds.Count - 1;
+            }
+        }
+
+        private void DrawRoundDetails(WaveRound round)
+        {
+            GUILayout.Space(5);
+            EditorGUI.BeginChangeCheck();
+            
+            GUILayout.BeginHorizontal();
+            int newRoundNum = EditorGUILayout.IntField("Round Number", round.roundNumber);
+            int newReward = EditorGUILayout.IntField("Clear Reward", round.clearReward);
+            GUILayout.EndHorizontal();
+            
+            float newDelay = EditorGUILayout.FloatField("Next Round Delay (s)", round.nextRoundDelay);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(targetWave, "Edit Round Info");
+                round.roundNumber = newRoundNum;
+                round.clearReward = newReward;
+                round.nextRoundDelay = newDelay;
+            }
+
+            GUILayout.Space(10);
+            GUILayout.Label("Spawn Sequence", EditorStyles.boldLabel);
+
+            if (round.spawnSequence == null) round.spawnSequence = new System.Collections.Generic.List<WaveSpawnInfo>();
+
+            for (int j = 0; j < round.spawnSequence.Count; j++)
+            {
+                GUILayout.BeginVertical("helpbox");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Spawn Event #{j}", EditorStyles.miniBoldLabel, GUILayout.Width(120));
+                
+                if (GUILayout.Button("▲", EditorStyles.miniButtonLeft, GUILayout.Width(25)) && j > 0)
+                {
+                    Undo.RecordObject(targetWave, "Move Spawn Up");
+                    var temp = round.spawnSequence[j];
+                    round.spawnSequence[j] = round.spawnSequence[j - 1];
+                    round.spawnSequence[j - 1] = temp;
+                    break;
+                }
+                if (GUILayout.Button("▼", EditorStyles.miniButtonMid, GUILayout.Width(25)) && j < round.spawnSequence.Count - 1)
+                {
+                    Undo.RecordObject(targetWave, "Move Spawn Down");
+                    var temp = round.spawnSequence[j];
+                    round.spawnSequence[j] = round.spawnSequence[j + 1];
+                    round.spawnSequence[j + 1] = temp;
+                    break;
+                }
+                if (GUILayout.Button("X", EditorStyles.miniButtonRight, GUILayout.Width(25)))
+                {
+                    Undo.RecordObject(targetWave, "Remove Spawn");
+                    round.spawnSequence.RemoveAt(j);
                     break;
                 }
                 GUILayout.EndHorizontal();
 
                 EditorGUI.BeginChangeCheck();
-                var seq = targetWave.spawnSequence[i];
+                var seq = round.spawnSequence[j];
 
                 seq.monsterToSpawn = (MonsterData)EditorGUILayout.ObjectField("Monster", seq.monsterToSpawn, typeof(MonsterData), false);
                 
                 GUILayout.BeginHorizontal();
-                seq.spawnPointIndex = EditorGUILayout.IntField("Spawn Point ID", seq.spawnPointIndex);
+                seq.spawnPointIndex = EditorGUILayout.IntField("Spawn ID", seq.spawnPointIndex);
                 seq.spawnCount = EditorGUILayout.IntField("Count", seq.spawnCount);
                 GUILayout.EndHorizontal();
 
@@ -112,38 +188,13 @@ namespace TDF.Editor.Modules
                 {
                     Undo.RecordObject(targetWave, "Edit Spawn Event");
                 }
-                
-                GUILayout.Space(5);
-                EditorGUILayout.LabelField("Custom Waypoints (선택사항)", EditorStyles.boldLabel);
-                if (seq.customWaypoints == null) seq.customWaypoints = new System.Collections.Generic.List<Vector2>();
-                int wpCount = Mathf.Max(0, EditorGUILayout.IntField("Path Size", seq.customWaypoints.Count));
-                
-                if (wpCount != seq.customWaypoints.Count)
-                {
-                    Undo.RecordObject(targetWave, "Resize Custom Waypoints");
-                    while (seq.customWaypoints.Count < wpCount) seq.customWaypoints.Add(Vector2.zero);
-                    while (seq.customWaypoints.Count > wpCount) seq.customWaypoints.RemoveAt(seq.customWaypoints.Count - 1);
-                }
-                
-                for (int j = 0; j < seq.customWaypoints.Count; j++)
-                {
-                    EditorGUI.BeginChangeCheck();
-                    Vector2 newWp = EditorGUILayout.Vector2Field($"Point {j}", seq.customWaypoints[j]);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        Undo.RecordObject(targetWave, "Edit Custom Waypoint");
-                        seq.customWaypoints[j] = newWp;
-                    }
-                }
-
                 GUILayout.EndVertical();
             }
 
-            GUILayout.Space(5);
             if (GUILayout.Button("Add Spawn Event"))
             {
                 Undo.RecordObject(targetWave, "Add Spawn Event");
-                targetWave.spawnSequence.Add(new WaveSpawnInfo { spawnCount = 1, spawnInterval = 1f });
+                round.spawnSequence.Add(new WaveSpawnInfo { spawnCount = 1, spawnInterval = 1f });
             }
         }
     }

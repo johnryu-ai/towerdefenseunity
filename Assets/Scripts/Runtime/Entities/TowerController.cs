@@ -18,7 +18,6 @@ namespace TDF.Runtime.Entities
         private Transform cachedTransform;
 
         // 선택 및 사거리 시각화
-        private bool isSelected = false;
         private LineRenderer currentRangeLine;
         private LineRenderer nextRangeLine;
 
@@ -54,14 +53,12 @@ namespace TDF.Runtime.Entities
 
         public void Deselect()
         {
-            isSelected = false;
             currentRangeLine.gameObject.SetActive(false);
             nextRangeLine.gameObject.SetActive(false);
         }
 
         public void Select()
         {
-            isSelected = true;
             if (data != null && data.upgradeTiers != null)
             {
                 // 현재 사거리 그리기

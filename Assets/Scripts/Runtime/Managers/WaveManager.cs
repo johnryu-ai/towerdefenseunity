@@ -19,10 +19,12 @@ namespace TDF.Runtime.Managers
         [Header("Test Mode")]
         public WaveData testWaveData; // 테스트용 단일 웨이브 데이터
 
-        private bool isWaveRunning = false;
+        private bool isVictoryTriggered = false;
         
         public int CurrentWaveIndex { get; private set; } = 0;
-        public int TotalWaves => currentStageData != null && currentStageData.waves != null ? currentStageData.waves.Count : (testWaveData != null ? 1 : 0);
+        public bool HasStartedFirstWave { get; private set; } = false;
+        public int ActiveWaveCount { get; private set; } = 0;
+        public int TotalWaves => currentStageData != null && currentStageData.waveData != null && currentStageData.waveData.rounds != null ? currentStageData.waveData.rounds.Count : (testWaveData != null && testWaveData.rounds != null ? testWaveData.rounds.Count : 0);
 
         private void Awake()
         {
@@ -35,22 +37,33 @@ namespace TDF.Runtime.Managers
             // 테스트용 웨이브 시작 단축키 (Space)
             if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
             {
-                if (testWaveData != null) StartWave(testWaveData);
-                else Debug.LogWarning("WaveManager: 할당된 Test Wave Data가 없습니다!");
+                if (testWaveData != null && testWaveData.rounds != null && testWaveData.rounds.Count > 0) StartWave(testWaveData.rounds[0]);
+                else Debug.LogWarning("WaveManager: 할당된 Test Wave Data가 없거나 웨이브 라운드가 없습니다!");
+            }
+
+            // 모든 웨이브 스폰 완료 & 승리 처리 안됨 & 게임 중일 때 모든 몬스터 처치 확인
+            if (!isVictoryTriggered && HasStartedFirstWave && CurrentWaveIndex >= TotalWaves && ActiveWaveCount == 0)
+            {
+                if (GameManager.Instance.CurrentState == GameState.Playing)
+                {
+                    if (Entities.MonsterController.ActiveMonsters.Count == 0)
+                    {
+                        isVictoryTriggered = true;
+                        GameManager.Instance.ChangeState(GameState.Victory);
+                    }
+                }
             }
         }
 
         public void StartNextWave()
         {
-            if (isWaveRunning) return;
-
-            if (currentStageData != null && currentStageData.waves != null && CurrentWaveIndex < currentStageData.waves.Count)
+            if (currentStageData != null && currentStageData.waveData != null && currentStageData.waveData.rounds != null && CurrentWaveIndex < currentStageData.waveData.rounds.Count)
             {
-                StartWave(currentStageData.waves[CurrentWaveIndex]);
+                StartWave(currentStageData.waveData.rounds[CurrentWaveIndex]);
             }
-            else if (testWaveData != null && CurrentWaveIndex == 0)
+            else if (testWaveData != null && testWaveData.rounds != null && CurrentWaveIndex < testWaveData.rounds.Count)
             {
-                StartWave(testWaveData);
+                StartWave(testWaveData.rounds[CurrentWaveIndex]);
             }
             else
             {
@@ -58,15 +71,24 @@ namespace TDF.Runtime.Managers
             }
         }
 
-        public void StartWave(WaveData wave)
+
+        public void StartWave(WaveRound wave)
         {
-            if (isWaveRunning) return;
-            isWaveRunning = true;
+            // 웨이브가 시작되면 게임 상태를 Playing으로 변경하여 몬스터와 타워가 움직이도록 함
+            if (GameManager.Instance.CurrentState != GameState.Playing)
+            {
+                GameManager.Instance.ChangeState(GameState.Playing);
+            }
+
+            HasStartedFirstWave = true;
+            ActiveWaveCount++;
+            CurrentWaveIndex++;
+            
             OnRoundStarted?.Invoke(wave.roundNumber);
             StartCoroutine(SpawnSequenceCoroutine(wave));
         }
 
-        private IEnumerator SpawnSequenceCoroutine(WaveData wave)
+        private IEnumerator SpawnSequenceCoroutine(WaveRound wave)
         {
             // 각 스폰 이벤트 순차 처리 (단순화: 딜레이 후 스폰)
             // 실제 기획에 따라 여러 스폰 포인트에서 동시에 타이머가 돌도록 병렬 코루틴 처리로 고도화 가능
@@ -115,20 +137,41 @@ namespace TDF.Runtime.Managers
                 }
             }
 
-            // 모든 스폰 완료 대기
-            // TODO: 필드에 남은 몬스터가 0마리가 될 때까지 감지하는 로직 추가
-
+            // 모든 스폰 완료
             WaveCleared(wave);
+
+            // 다음 라운드가 있다면 자동 시작 타이머 실행
+            if (CurrentWaveIndex < TotalWaves)
+            {
+                StartCoroutine(AutoStartNextWaveCoroutine(wave.nextRoundDelay, CurrentWaveIndex));
+            }
         }
 
-        private void WaveCleared(WaveData wave)
+        private IEnumerator AutoStartNextWaveCoroutine(float delay, int waveIndexAtStart)
         {
-            isWaveRunning = false;
+            float timer = delay;
+            while (timer > 0)
+            {
+                // 사용자가 수동으로 눌러서 이미 다음 웨이브(혹은 그 이후)가 시작되었다면 자동 타이머 중단
+                if (CurrentWaveIndex > waveIndexAtStart) yield break; 
+
+                timer -= Time.deltaTime;
+                yield return null;
+            }
+
+            if (CurrentWaveIndex == waveIndexAtStart)
+            {
+                StartNextWave();
+            }
+        }
+
+        private void WaveCleared(WaveRound wave)
+        {
+            ActiveWaveCount--;
             GameManager.Instance.AddGold(wave.clearReward);
-            CurrentWaveIndex++;
             OnRoundCleared?.Invoke(wave.roundNumber);
 
-            // 다음 라운드 자동 시작 로직이 있다면 nextRoundDelay 이후 호출
+            // 마지막 적이 파괴되었을 때 Update()에서 승리 처리됨
         }
     }
 }

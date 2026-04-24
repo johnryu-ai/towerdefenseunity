@@ -20,21 +20,21 @@ MonoBehaviour:
   upgradeTiers:
   - tierLevel: 0
     buildOrUpgradeCost: 100
-    range: 10
+    range: 1.5
     damage: 10
     attackSpeed: 1
     sellPrice: 80
     manaCost: 0
   - tierLevel: 1
     buildOrUpgradeCost: 100
-    range: 15
+    range: 2
     damage: 15
     attackSpeed: 2
     sellPrice: 160
     manaCost: 0
   - tierLevel: 2
     buildOrUpgradeCost: 120
-    range: 20
+    range: 3
     damage: 20
     attackSpeed: 3
     sellPrice: 256

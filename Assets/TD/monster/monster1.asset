@@ -16,7 +16,7 @@ MonoBehaviour:
   monsterName: monster1
   stats:
     moveSpeed: 1
-    health: 100
+    health: 20
     killReward: 10
     baseDamage: 1
   movementType: 0

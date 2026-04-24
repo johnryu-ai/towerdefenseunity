@@ -46,12 +46,14 @@ namespace TDF.Editor.Modules
             
             int newIdx = EditorGUILayout.IntField("Stage Index", targetStage.stageIndex);
             MapData newMap = (MapData)EditorGUILayout.ObjectField("Linked Map", targetStage.linkedMapData, typeof(MapData), false);
+            WaveData newWave = (WaveData)EditorGUILayout.ObjectField("Wave Data", targetStage.waveData, typeof(WaveData), false);
 
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(targetStage, "Edit Stage Sequence Info");
                 targetStage.stageIndex = newIdx;
                 targetStage.linkedMapData = newMap;
+                targetStage.waveData = newWave;
             }
         }
 

@@ -49,18 +49,69 @@ namespace TDF.Core.Data
         public Sprite backgroundSprite;
         public Sprite tileSprite;
 
-        public TileType[] GridLayout => gridLayout;
+        private TileType[] runtimeGridLayout;
+        private static int playSessionId = 0;
+        private int mySessionId = -1;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSession()
+        {
+            playSessionId++;
+        }
+#endif
+
+        private void EnsureRuntimeGrid()
+        {
+            if (runtimeGridLayout == null || runtimeGridLayout.Length != gridLayout.Length || mySessionId != playSessionId)
+            {
+                runtimeGridLayout = (TileType[])gridLayout.Clone();
+                mySessionId = playSessionId;
+            }
+        }
+
+        public void ResetRuntimeState()
+        {
+            runtimeGridLayout = null;
+            mySessionId = -1;
+        }
+
+        public TileType[] GridLayout 
+        {
+            get 
+            {
+                if (Application.isPlaying)
+                {
+                    EnsureRuntimeGrid();
+                    return runtimeGridLayout;
+                }
+                return gridLayout;
+            }
+        }
 
         public TileType GetTileAt(int x, int y)
         {
             if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight)
                 return TileType.NonBuildable;
+                
+            if (Application.isPlaying)
+            {
+                EnsureRuntimeGrid();
+                return runtimeGridLayout[y * gridWidth + x];
+            }
             return gridLayout[y * gridWidth + x];
         }
 
         public void SetTileAt(int x, int y, TileType type)
         {
             if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
+
+            if (Application.isPlaying)
+            {
+                EnsureRuntimeGrid();
+                runtimeGridLayout[y * gridWidth + x] = type;
+                return;
+            }
             gridLayout[y * gridWidth + x] = type;
         }
 

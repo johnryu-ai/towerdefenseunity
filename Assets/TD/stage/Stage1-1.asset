@@ -12,7 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d1b84e10cd5d4b408e4c83bfc4ecafd, type: 3}
   m_Name: Stage1-1
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.StageData
-  stageIndex: 0
+  stageIndex: 1
   linkedMapData: {fileID: 11400000, guid: ca8d39d7a0543f148ba2e32f08626365, type: 2}
-  entryStory: []
-  clearStory: []
+  entryStory:
+  - storyText: start test1
+    backgroundImage: {fileID: 0}
+    videoClip: {fileID: 0}
+  clearStory:
+  - storyText: end test1
+    backgroundImage: {fileID: 0}
+    videoClip: {fileID: 0}
+  waveData: {fileID: 11400000, guid: 7c08bccb9e4816a49bc33e2e764e7bfd, type: 2}

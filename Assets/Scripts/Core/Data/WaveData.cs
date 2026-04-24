@@ -16,16 +16,21 @@ namespace TDF.Core.Data
         public List<Vector2> customWaypoints = new List<Vector2>();
     }
 
+    [System.Serializable]
+    public class WaveRound
+    {
+        public int roundNumber;
+        public int clearReward;
+        public float nextRoundDelay = 5f;
+        public List<WaveSpawnInfo> spawnSequence = new List<WaveSpawnInfo>();
+    }
+
     [CreateAssetMenu(fileName = "NewWaveData", menuName = "TDF/Data/WaveData")]
     public class WaveData : ScriptableObject
     {
-        [Header("Round Info")]
-        public int roundNumber;
         public MapData linkedMapData;
-        public int clearReward;
-        public float nextRoundDelay = 5f;
-
-        [Header("Spawn Sequence")]
-        public List<WaveSpawnInfo> spawnSequence = new List<WaveSpawnInfo>();
+        
+        [Header("Waves / Rounds")]
+        public List<WaveRound> rounds = new List<WaveRound>();
     }
 }

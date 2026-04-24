@@ -35,12 +35,6 @@ namespace TDF.Runtime.Map
                 Camera.main.orthographicSize = 4f; 
                 Camera.main.backgroundColor = new Color(0.2f, 0.2f, 0.2f); // 남는 영역 회색
             }
-
-            // GameManager에서 초기화가 끝난 후 맵 데이터 연동
-            if (GameManager.Instance != null && GameManager.Instance.currentMapData != null)
-            {
-                GenerateMap(GameManager.Instance.currentMapData);
-            }
         }
 
         public void GenerateMap(MapData mapData)
@@ -126,56 +120,129 @@ namespace TDF.Runtime.Map
             List<Vector2> path = new List<Vector2>();
             if (currentMapData == null) return path;
 
-            int currX = -1, currY = -1;
-            for (int y = 0; y < currentMapData.gridHeight; y++)
+            int gridW = currentMapData.gridWidth;
+            int gridH = currentMapData.gridHeight;
+
+            int spawnX = -1, spawnY = -1;
+            int baseX = -1, baseY = -1;
+
+            for (int y = 0; y < gridH; y++)
             {
-                for (int x = 0; x < currentMapData.gridWidth; x++)
+                for (int x = 0; x < gridW; x++)
                 {
-                    if (currentMapData.GetTileAt(x, y) == TileType.Spawn)
-                    {
-                        currX = x; currY = y; break;
-                    }
+                    TileType t = currentMapData.GetTileAt(x, y);
+                    if (t == TileType.Spawn) { spawnX = x; spawnY = y; }
+                    else if (t == TileType.Base) { baseX = x; baseY = y; }
                 }
-                if (currX != -1) break;
             }
 
-            if (currX == -1) return path;
+            if (spawnX == -1 || baseX == -1) return path;
 
-            bool[,] visited = new bool[currentMapData.gridWidth, currentMapData.gridHeight];
-            
-            while (true)
+            // 1. 기지(Base)로부터 각 타일까지의 최단 거리 계산 (BFS)
+            int[,] distances = new int[gridW, gridH];
+            for (int x = 0; x < gridW; x++)
+                for (int y = 0; y < gridH; y++)
+                    distances[x, y] = int.MaxValue;
+
+            Queue<Vector2Int> queue = new Queue<Vector2Int>();
+            queue.Enqueue(new Vector2Int(baseX, baseY));
+            distances[baseX, baseY] = 0;
+
+            int[] dx = { 1, -1, 0, 0 };
+            int[] dy = { 0, 0, 1, -1 };
+
+            while (queue.Count > 0)
             {
-                path.Add(GetWorldPosition(currX, currY));
-                visited[currX, currY] = true;
-
-                if (currentMapData.GetTileAt(currX, currY) == TileType.Base) break;
-
-                int nextX = -1, nextY = -1;
-                int[] dx = { 1, -1, 0, 0 };
-                int[] dy = { 0, 0, 1, -1 };
-                
+                Vector2Int curr = queue.Dequeue();
                 for (int i = 0; i < 4; i++)
                 {
-                    int nx = currX + dx[i];
-                    int ny = currY + dy[i];
-                    if (nx >= 0 && nx < currentMapData.gridWidth && ny >= 0 && ny < currentMapData.gridHeight)
+                    int nx = curr.x + dx[i];
+                    int ny = curr.y + dy[i];
+                    if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH)
                     {
-                        if (!visited[nx, ny])
+                        TileType type = currentMapData.GetTileAt(nx, ny);
+                        if ((type == TileType.Path || type == TileType.Spawn) && distances[nx, ny] == int.MaxValue)
                         {
-                            TileType type = currentMapData.GetTileAt(nx, ny);
-                            if (type == TileType.Path || type == TileType.Base)
-                            {
-                                nextX = nx; nextY = ny; break;
-                            }
+                            distances[nx, ny] = distances[curr.x, curr.y] + 1;
+                            queue.Enqueue(new Vector2Int(nx, ny));
                         }
                     }
                 }
-
-                if (nextX == -1) break;
-                currX = nextX;
-                currY = nextY;
             }
+
+            // 2. 몬스터 이동 시뮬레이션
+            Vector2Int currentPos = new Vector2Int(spawnX, spawnY);
+            path.Add(GetWorldPosition(currentPos.x, currentPos.y));
+
+            // 시작 방향 결정 (가장 거리가 짧은 유효 타일 방향)
+            Vector2Int currentDir = Vector2Int.zero;
+            int minDist = int.MaxValue;
+            for (int i = 0; i < 4; i++)
+            {
+                int nx = currentPos.x + dx[i];
+                int ny = currentPos.y + dy[i];
+                if (IsValidPathTile(nx, ny, gridW, gridH))
+                {
+                    if (distances[nx, ny] < minDist)
+                    {
+                        minDist = distances[nx, ny];
+                        currentDir = new Vector2Int(dx[i], dy[i]);
+                    }
+                }
+            }
+
+            if (currentDir == Vector2Int.zero) return path; // 길 없음
+
+            int safeguard = 0;
+            while (currentPos.x != baseX || currentPos.y != baseY)
+            {
+                safeguard++;
+                if (safeguard > gridW * gridH * 2) break; // 무한 루프 방지
+
+                Vector2Int forward = currentPos + currentDir;
+                bool canGoForward = IsValidPathTile(forward.x, forward.y, gridW, gridH);
+
+                if (canGoForward)
+                {
+                    // 직진
+                    currentPos = forward;
+                    path.Add(GetWorldPosition(currentPos.x, currentPos.y));
+                }
+                else
+                {
+                    // 막힘: 90도 회전
+                    Vector2Int left = new Vector2Int(-currentDir.y, currentDir.x);
+                    Vector2Int right = new Vector2Int(currentDir.y, -currentDir.x);
+
+                    Vector2Int posLeft = currentPos + left;
+                    Vector2Int posRight = currentPos + right;
+
+                    bool canGoLeft = IsValidPathTile(posLeft.x, posLeft.y, gridW, gridH);
+                    bool canGoRight = IsValidPathTile(posRight.x, posRight.y, gridW, gridH);
+
+                    if (canGoLeft && canGoRight)
+                    {
+                        // 양쪽 다 길이 있는 T자형 막다른 길이면 기지에 가까운 쪽 선택
+                        int distLeft = distances[posLeft.x, posLeft.y];
+                        int distRight = distances[posRight.x, posRight.y];
+                        
+                        if (distLeft <= distRight) currentDir = left;
+                        else currentDir = right;
+                    }
+                    else if (canGoLeft) currentDir = left;
+                    else if (canGoRight) currentDir = right;
+                    else break; // 막다른 길
+                }
+            }
+
             return path;
+        }
+
+        private bool IsValidPathTile(int x, int y, int gridW, int gridH)
+        {
+            if (x < 0 || x >= gridW || y < 0 || y >= gridH) return false;
+            TileType type = currentMapData.GetTileAt(x, y);
+            return type == TileType.Path || type == TileType.Base;
         }
 
         private Color GetColorForTile(TileType type)

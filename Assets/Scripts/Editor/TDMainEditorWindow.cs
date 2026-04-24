@@ -7,7 +7,7 @@ namespace TDF.Editor
 
     public class TDMainEditorWindow : EditorWindow
     {
-        private enum Tab { Map, Tower, Monster, Wave, Stage, AssetMeta }
+        private enum Tab { Map, Tower, Monster, Wave, Stage, Campaign, AssetMeta, PageUI }
         private Tab currentTab = Tab.Map;
 
         // 모듈 인스턴스
@@ -16,6 +16,8 @@ namespace TDF.Editor
         private MonsterEditorModule monsterEditorModule = new MonsterEditorModule();
         private WaveEditorModule waveEditorModule = new WaveEditorModule();
         private StageEditorModule stageEditorModule = new StageEditorModule();
+        private CampaignEditorModule campaignEditorModule = new CampaignEditorModule();
+        private PageEditorModule pageEditorModule = new PageEditorModule();
 
         [MenuItem("Tools/TDF/Tower Defense Editor")]
         public static void ShowWindow()
@@ -50,6 +52,8 @@ namespace TDF.Editor
             if (GUILayout.Toggle(currentTab == Tab.Monster, "Monster Editor", "Button")) currentTab = Tab.Monster;
             if (GUILayout.Toggle(currentTab == Tab.Wave, "Wave Editor", "Button")) currentTab = Tab.Wave;
             if (GUILayout.Toggle(currentTab == Tab.Stage, "Stage Editor", "Button")) currentTab = Tab.Stage;
+            if (GUILayout.Toggle(currentTab == Tab.Campaign, "Campaign Editor", "Button")) currentTab = Tab.Campaign;
+            if (GUILayout.Toggle(currentTab == Tab.PageUI, "Page & UI Editor", "Button")) currentTab = Tab.PageUI;
             if (GUILayout.Toggle(currentTab == Tab.AssetMeta, "Asset & Meta", "Button")) currentTab = Tab.AssetMeta;
 
             GUILayout.EndVertical();
@@ -75,6 +79,12 @@ namespace TDF.Editor
                     break;
                 case Tab.Stage:
                     stageEditorModule.Draw();
+                    break;
+                case Tab.Campaign:
+                    campaignEditorModule.Draw();
+                    break;
+                case Tab.PageUI:
+                    pageEditorModule.Draw();
                     break;
                 case Tab.AssetMeta:
                     GUILayout.Label("Asset & Meta Editor", EditorStyles.boldLabel);

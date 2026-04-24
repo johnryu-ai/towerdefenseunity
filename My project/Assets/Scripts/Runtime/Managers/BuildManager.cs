@@ -155,11 +155,9 @@ namespace TDF.Runtime.Managers
             if (showTowerPopup)
             {
                 popupRect = new Rect(0, 135, 150, 945); // Left Panel
-                GUILayout.BeginArea(popupRect, GUI.skin.box);
+                GUILayout.BeginArea(popupRect, "Build", GUI.skin.window);
                 
                 GUILayout.Space(10);
-                GUILayout.Label("Build", titleStyle);
-                GUILayout.Space(20);
 
                 var availableTowers = GameManager.Instance.currentMapData.config.availableTowers;
                 int validTowers = 0;
@@ -199,14 +197,12 @@ namespace TDF.Runtime.Managers
             else if (showUpgradePopup && selectedBuiltTower != null)
             {
                 popupRect = new Rect(1770, 135, 150, 945); // Right Panel
-                GUILayout.BeginArea(popupRect, GUI.skin.box);
+                GUILayout.BeginArea(popupRect, "Manage", GUI.skin.window);
                 
                 TowerData data = selectedBuiltTower.GetData();
                 int currentTier = selectedBuiltTower.GetCurrentTierIndex();
                 bool isMaxLevel = currentTier >= data.upgradeTiers.Count - 1;
 
-                GUILayout.Space(10);
-                GUILayout.Label("Manage", titleStyle);
                 GUILayout.Space(10);
                 GUILayout.Label($"{data.towerName}\nLv {currentTier + 1}", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 18 });
                 GUILayout.Space(20);

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d1b84e10cd5d4b408e4c83bfc4ecafd, type: 3}
+  m_Name: Stage1-2
+  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.StageData
+  stageIndex: 2
+  linkedMapData: {fileID: 11400000, guid: 0ac7ee6476b1e924a9c1f6db7e985e49, type: 2}
+  entryStory:
+  - storyText: start test2
+    backgroundImage: {fileID: 0}
+    videoClip: {fileID: 0}
+  clearStory:
+  - storyText: end test 2
+    backgroundImage: {fileID: 0}
+    videoClip: {fileID: 0}
+  waveData: {fileID: 11400000, guid: 2de737f8d1d361a438a1412209500de0, type: 2}

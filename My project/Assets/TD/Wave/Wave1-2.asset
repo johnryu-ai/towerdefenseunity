@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fda5615c56ca48e46aa4f19d21b766d6, type: 3}
+  m_Name: Wave1-2
+  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.WaveData
+  linkedMapData: {fileID: 11400000, guid: 0ac7ee6476b1e924a9c1f6db7e985e49, type: 2}
+  rounds:
+  - roundNumber: 1
+    clearReward: 0
+    nextRoundDelay: 3
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: ce158d7000c77664f95f2e899c7d31a7, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 10
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []
+  - roundNumber: 2
+    clearReward: 0
+    nextRoundDelay: 3
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: b7dd84b8f4da4f149a56062e11831e9b, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 5
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []
+  - roundNumber: 3
+    clearReward: 0
+    nextRoundDelay: 3
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: 20f994cf3132e1848bf798d11c2fb5aa, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 10
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []

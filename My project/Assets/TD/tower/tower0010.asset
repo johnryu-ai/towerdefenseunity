@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d77d7b5141ebcd438072a4f8d3d2438, type: 3}
+  m_Name: tower0010
+  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.TowerData
+  towerId: Tower0010
+  towerName: Sword
+  attackAttribute: 0
+  attackType: 0
+  targetType: 0
+  upgradeTiers:
+  - tierLevel: 0
+    buildOrUpgradeCost: 100
+    range: 1.5
+    damage: 10
+    attackSpeed: 1
+    sellPrice: 80
+    manaCost: 0
+  - tierLevel: 1
+    buildOrUpgradeCost: 100
+    range: 2
+    damage: 15
+    attackSpeed: 2
+    sellPrice: 160
+    manaCost: 0
+  - tierLevel: 2
+    buildOrUpgradeCost: 120
+    range: 2.5
+    damage: 20
+    attackSpeed: 3
+    sellPrice: 256
+    manaCost: 0
+  assets:
+    idleSprite: {fileID: 0}
+    attackSprite: {fileID: 0}
+    idleAnim: {fileID: 0}
+    attackAnim: {fileID: 0}
+    prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
+    projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
+    hitEffectPrefab: {fileID: 0}

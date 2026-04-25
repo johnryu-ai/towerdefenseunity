@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: login
   pageType: 0
-  uiPrefab: {fileID: 0}
+  uiPrefab: {fileID: 1643441916474430566, guid: 7db63a02c73ed844b8cdf23503de67a8, type: 3}
   isPopup: 0

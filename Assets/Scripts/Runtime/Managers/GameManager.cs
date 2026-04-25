@@ -25,6 +25,10 @@ namespace TDF.Runtime.Managers
         public StageData currentStageData;
         public MapData currentMapData; // 에디터/씬에서 임시 할당 또는 StageManager를 통해 주입됨
 
+        [Header("Scene Names")]
+        [Tooltip("메인메뉴(로비) 씬 이름. Build Settings에 등록된 씬 이름과 일치해야 합니다.")]
+        public string mainMenuSceneName = "LobbyScene";
+
         public static CampaignData staticTestCampaign;
         public static int staticTestStageIndex = 0;
         
@@ -89,6 +93,23 @@ namespace TDF.Runtime.Managers
                 
                 OnGoldChanged?.Invoke(CurrentGold);
                 OnHPChanged?.Invoke(CurrentHP);
+
+                // ── UserDataManager 연동: 스테이지 기본 제공 타워를 'default'로 자동 언락 ──
+                if (UserDataManager.Instance != null && currentMapData.config.availableTowers != null)
+                {
+                    string stageSourceId = currentStageData != null ? currentStageData.name : "unknown";
+                    foreach (var towerData in currentMapData.config.availableTowers)
+                    {
+                        if (towerData != null && !string.IsNullOrEmpty(towerData.towerId))
+                        {
+                            UserDataManager.Instance.UnlockTower(
+                                towerData.towerId,
+                                TDF.Core.Data.TowerUnlockSource.Default,
+                                stageSourceId
+                            );
+                        }
+                    }
+                }
             }
 
             if (currentStageData != null && currentStageData.entryStory != null && currentStageData.entryStory.Count > 0)
@@ -104,6 +125,19 @@ namespace TDF.Runtime.Managers
         public void FinishStory()
         {
             stageStartTime = Time.time;
+
+            // ── UserDataManager 연동: 플레이 세션 스냅샷 저장 ──
+            if (UserDataManager.Instance != null && currentMapData != null)
+            {
+                UserDataManager.Instance.SavePlaySession(
+                    campaignName: currentCampaign != null ? currentCampaign.campaignName : "standalone",
+                    stageIndex:   currentStageIndex,
+                    gold:         CurrentGold,
+                    hp:           CurrentHP,
+                    waveIndex:    0
+                );
+            }
+
             ChangeState(GameState.Ready);
         }
 
@@ -127,18 +161,59 @@ namespace TDF.Runtime.Managers
             }
         }
 
+        /// <summary>정적 캠페인 상태를 초기화하고 메인메뉴 씬으로 이동한다.</summary>
+        public void GoToMainMenu()
+        {
+            // 정적 캠페인 진행 상태 초기화
+            staticTestCampaign = null;
+            staticTestStageIndex = 0;
+
+            // timeScale 복구 (Victory/Paused 상태에서 0이 될 수 있음)
+            Time.timeScale = 1f;
+
+            UnityEngine.SceneManagement.SceneManager.LoadScene(mainMenuSceneName);
+        }
+
         public void ChangeState(GameState newState)
         {
             if (CurrentState == newState) return;
             CurrentState = newState;
             OnGameStateChanged?.Invoke(CurrentState);
 
-            if (CurrentState == GameState.Paused) Time.timeScale = 0f;
-            else if (CurrentState == GameState.Playing) Time.timeScale = 1f;
-            else if (CurrentState == GameState.Victory) 
+            if (CurrentState == GameState.Paused)
+            {
+                Time.timeScale = 0f;
+            }
+            else if (CurrentState == GameState.Playing)
+            {
+                Time.timeScale = 1f;
+            }
+            else if (CurrentState == GameState.Victory)
             {
                 stageClearTime = Time.time;
                 Time.timeScale = 0f;
+
+                // ── UserDataManager 연동: 클리어 결과 기록 + 세션 삭제 ──
+                if (UserDataManager.Instance != null && currentStageData != null)
+                {
+                    int clearTimeSec = Mathf.FloorToInt(stageClearTime - stageStartTime);
+                    UserDataManager.Instance.RecordStageClear(
+                        stageId:          currentStageData.name,
+                        stageName:        currentStageData.name,
+                        livesRemaining:   CurrentHP,
+                        goldRemaining:    CurrentGold,
+                        clearTimeSeconds: Mathf.Max(0, clearTimeSec)
+                    );
+                    UserDataManager.Instance.ClearPlaySession();
+                }
+            }
+            else if (CurrentState == GameState.GameOver)
+            {
+                // ── UserDataManager 연동: 게임오버 시 세션 삭제 ──
+                if (UserDataManager.Instance != null)
+                {
+                    UserDataManager.Instance.ClearPlaySession();
+                }
             }
         }
 

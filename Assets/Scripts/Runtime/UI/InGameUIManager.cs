@@ -165,6 +165,17 @@ namespace TDF.Runtime.UI
                 {
                     GameManager.Instance.ChangeState(GameState.ClearStory);
                 }
+
+                GUILayout.Space(10);
+
+                // ── 메인메뉴로 버튼 ──
+                GUI.color = new Color(1f, 0.35f, 0.35f);
+                if (GUILayout.Button("⏹ 메인메뉴로", btnStyle, GUILayout.Height(60)))
+                {
+                    GameManager.Instance.GoToMainMenu();
+                }
+                GUI.color = Color.white;
+
                 GUILayout.Space(40);
                 GUILayout.EndArea();
             }
@@ -209,6 +220,17 @@ namespace TDF.Runtime.UI
                 {
                     GameManager.Instance.GoToNextStage();
                 }
+
+                GUILayout.Space(10);
+
+                // ── 메인메뉴로 버튼 ──
+                GUI.color = new Color(1f, 0.35f, 0.35f);
+                if (GUILayout.Button("⏹ 메인메뉴로", btnStyle, GUILayout.Height(60)))
+                {
+                    GameManager.Instance.GoToMainMenu();
+                }
+                GUI.color = Color.white;
+
                 GUILayout.Space(30);
                 GUILayout.EndArea();
             }

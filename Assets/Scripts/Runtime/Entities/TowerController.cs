@@ -101,10 +101,38 @@ namespace TDF.Runtime.Entities
             GridY = gridY;
             cachedTransform = transform;
             
-            if (data.assets != null && data.assets.idleSprite != null)
+            if (data.assets != null)
             {
-                var sr = GetComponent<SpriteRenderer>();
-                if (sr != null) sr.sprite = data.assets.idleSprite;
+                // 스케일 적용
+                transform.localScale = Vector3.one * data.assets.visualScale;
+
+                // 하단 정렬 (타일의 하단 경계에 발을 맞춤)
+                // 타일의 월드 좌표는 중심점이므로, 하단으로 내렸다가 스케일 절반만큼 위로 올림
+                Vector3 centerPos = transform.position;
+                transform.position = new Vector3(centerPos.x, centerPos.y - 0.5f + (data.assets.visualScale * 0.5f), centerPos.z);
+
+                if (data.assets.idleSprite != null)
+                {
+                    var sr = GetComponent<SpriteRenderer>();
+                    if (sr != null)
+                    {
+                        sr.sprite = data.assets.idleSprite;
+                        // 어둡게 보이는 문제 해결: 머티리얼을 기본 언릿 스프라이트용으로 강제 설정
+                        sr.material = new Material(Shader.Find("Sprites/Default"));
+                        sr.color = Color.white;
+                        UpdateSortingOrder();
+                    }
+                }
+            }
+        }
+
+        private void UpdateSortingOrder()
+        {
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                // 기준값 1000에서 Y값이 작을수록(하단), X값이 작을수록(좌측) 큰 값을 가지도록 수식 적용
+                sr.sortingOrder = 1000 - Mathf.RoundToInt(transform.position.y * 100f) - Mathf.RoundToInt(transform.position.x * 10f);
             }
         }
 
@@ -130,8 +158,11 @@ namespace TDF.Runtime.Entities
                 if (Vector2.SqrMagnitude(cachedTransform.position - currentTarget.transform.position) > currentTier.range * currentTier.range)
                 {
                     currentTarget = null;
+                    RevertToIdle();
                     return;
                 }
+
+                UpdateAttackSprite(currentTarget.transform.position);
 
                 attackTimer -= Time.deltaTime;
                 if (attackTimer <= 0f)
@@ -141,6 +172,77 @@ namespace TDF.Runtime.Entities
                     attackTimer = 1f / Mathf.Max(0.1f, currentTier.attackSpeed);
                 }
             }
+            else
+            {
+                RevertToIdle();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            // 애니메이터 덮어씌우기 방지 및 해상도가 큰 스프라이트의 정규화 처리
+            if (data != null && data.assets != null)
+            {
+                var sr = GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sprite != null)
+                {
+                    // 스프라이트의 가로/세로 중 가장 큰 원본 사이즈 추출
+                    float maxBound = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y);
+                    if (maxBound > 0.001f)
+                    {
+                        // 원본 크기가 달라도 visualScale(타일 크기) 안에 들어가도록 비율 조정
+                        float normalizedScale = data.assets.visualScale / maxBound;
+                        transform.localScale = Vector3.one * normalizedScale;
+                    }
+                    else
+                    {
+                        transform.localScale = Vector3.one * data.assets.visualScale;
+                    }
+                }
+                else
+                {
+                    transform.localScale = Vector3.one * data.assets.visualScale;
+                }
+            }
+        }
+
+        private void RevertToIdle()
+        {
+            if (data.assets != null && data.assets.idleSprite != null)
+            {
+                var sr = GetComponent<SpriteRenderer>();
+                if (sr != null) sr.sprite = data.assets.idleSprite;
+            }
+        }
+
+        private void UpdateAttackSprite(Vector2 targetPos)
+        {
+            if (data.assets == null || data.assets.attackSprites8Dir == null) return;
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr == null) return;
+
+            Vector2 dir = (targetPos - (Vector2)cachedTransform.position).normalized;
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            if (angle < 0) angle += 360f;
+
+            // 0=Right, 45=UpRight, 90=Up, 135=UpLeft, 180=Left, 225=DownLeft, 270=Down, 315=DownRight
+            int octant = Mathf.RoundToInt(angle / 45f) % 8;
+
+            Sprite s = null;
+            var dirs = data.assets.attackSprites8Dir;
+            switch (octant)
+            {
+                case 0: s = dirs.right; break;
+                case 1: s = dirs.upRight; break;
+                case 2: s = dirs.up; break;
+                case 3: s = dirs.upLeft; break;
+                case 4: s = dirs.left; break;
+                case 5: s = dirs.downLeft; break;
+                case 6: s = dirs.down; break;
+                case 7: s = dirs.downRight; break;
+            }
+
+            if (s != null) sr.sprite = s;
         }
 
         private void FindTarget(float range)
@@ -182,7 +284,10 @@ namespace TDF.Runtime.Entities
                 if (projectile != null)
                 {
                     var tier = data.upgradeTiers[currentTierIndex];
-                    projectile.Initialize(currentTarget, tier.damage, data.attackAttribute, data.assets.hitEffectPrefab);
+                    projectile.Initialize(currentTarget, tier.damage, data.attackAttribute, data.assets.hitEffectPrefab, tier.projectileSprite);
+                    
+                    // 발사체 스케일 적용
+                    projectile.transform.localScale = Vector3.one * data.assets.projectileScale;
                 }
             }
         }

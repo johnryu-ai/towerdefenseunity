@@ -22,6 +22,9 @@ namespace TDF.Core.Data
         public Sprite dieSprite;
         public AnimationClip moveAnim;
         public GameObject prefab;
+
+        [Header("Scale")]
+        public float visualScale = 1.0f; // 타일 기준 크기 조절 (1.0 = 타일 크기)
     }
 
     [System.Serializable]

@@ -50,12 +50,25 @@ namespace TDF.Runtime.Entities
                 currentHealth = data.stats.health;
             }
 
-            if (data != null && data.assets != null && data.assets.moveSprite != null)
+            if (data != null && data.assets != null)
             {
-                spriteRenderer.sprite = data.assets.moveSprite;
+                // 스케일 적용
+                transform.localScale = Vector3.one * data.assets.visualScale;
+
+                // 하단 정렬 (발 위치를 타일 하단에 맞춤)
+                // 몬스터는 경로 이동 중이므로 초기 위치 설정 시 오프셋 반영
+                transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f + (data.assets.visualScale * 0.5f), transform.position.z);
+
+                if (data.assets.moveSprite != null)
+                {
+                    spriteRenderer.sprite = data.assets.moveSprite;
+                    // 어둡게 보이는 문제 해결: 머티리얼 강제 설정
+                    spriteRenderer.material = new Material(Shader.Find("Sprites/Default"));
+                    spriteRenderer.color = Color.white;
+                }
             }
 
-            spriteRenderer.sortingOrder = 10; // 타일(0)보다 항상 위에 렌더링되도록 강제 설정
+            UpdateSortingOrder();
 
             statusEffects.ResetEffects();
         }
@@ -66,6 +79,44 @@ namespace TDF.Runtime.Entities
             if (statusEffects.IsStunned) return;
 
             Move();
+        }
+
+        private void LateUpdate()
+        {
+            // 애니메이터 덮어씌우기 방지 및 해상도가 큰 스프라이트의 정규화 처리
+            if (data != null && data.assets != null)
+            {
+                if (spriteRenderer != null && spriteRenderer.sprite != null)
+                {
+                    // 스프라이트의 가로/세로 중 가장 큰 원본 사이즈 추출
+                    float maxBound = Mathf.Max(spriteRenderer.sprite.bounds.size.x, spriteRenderer.sprite.bounds.size.y);
+                    if (maxBound > 0.001f)
+                    {
+                        // 원본 크기가 달라도 visualScale(타일 크기) 안에 들어가도록 비율 조정
+                        float normalizedScale = data.assets.visualScale / maxBound;
+                        transform.localScale = Vector3.one * normalizedScale;
+                    }
+                    else
+                    {
+                        transform.localScale = Vector3.one * data.assets.visualScale;
+                    }
+                }
+                else
+                {
+                    transform.localScale = Vector3.one * data.assets.visualScale;
+                }
+            }
+
+            UpdateSortingOrder();
+        }
+
+        private void UpdateSortingOrder()
+        {
+            if (spriteRenderer != null)
+            {
+                // 기준값 1000에서 Y값이 작을수록(하단), X값이 작을수록(좌측) 큰 값을 가지도록 수식 적용
+                spriteRenderer.sortingOrder = 1000 - Mathf.RoundToInt(transform.position.y * 100f) - Mathf.RoundToInt(transform.position.x * 10f);
+            }
         }
 
         private void Move()
@@ -107,6 +158,7 @@ namespace TDF.Runtime.Entities
         private void Die()
         {
             GameManager.Instance.AddGold(data.stats.killReward);
+            GameManager.Instance.ReportMonsterKilled();
 
             // 분열 로직 처리
             if (data.splitLogic != null && data.splitLogic.splitOnDeath && data.splitLogic.splitMonsterType != null)

@@ -17,6 +17,22 @@ namespace TDF.Core.Data
         public float attackSpeed; // 1초당 공격 횟수 등
         public int sellPrice;
         public float manaCost;
+
+        [Header("Visuals")]
+        public Sprite projectileSprite; // 업그레이드 상태별 발사체 이미지
+    }
+
+    [System.Serializable]
+    public class DirectionalSprites
+    {
+        [Tooltip("키패드 8")] public Sprite up;
+        [Tooltip("키패드 2")] public Sprite down;
+        [Tooltip("키패드 4")] public Sprite left;
+        [Tooltip("키패드 6")] public Sprite right;
+        [Tooltip("키패드 7")] public Sprite upLeft;
+        [Tooltip("키패드 9")] public Sprite upRight;
+        [Tooltip("키패드 1")] public Sprite downLeft;
+        [Tooltip("키패드 3")] public Sprite downRight;
     }
 
     [System.Serializable]
@@ -24,11 +40,16 @@ namespace TDF.Core.Data
     {
         public Sprite idleSprite;
         public Sprite attackSprite;
+        public DirectionalSprites attackSprites8Dir; // 8방향 공격 모션용
         public AnimationClip idleAnim;
         public AnimationClip attackAnim;
         public GameObject prefab;
-        public GameObject projectilePrefab;
+        public GameObject projectilePrefab; // 기본 발사체 프리팹 (스프라이트는 tier에서 오버라이드)
         public GameObject hitEffectPrefab;
+        
+        [Header("Scale")]
+        public float visualScale = 1.0f; // 타일 기준 크기 조절 (1.0 = 타일 크기)
+        public float projectileScale = 0.5f; // 발사체 크기 조절 (0.5 = 반 타일 크기)
     }
 
     [CreateAssetMenu(fileName = "NewTowerData", menuName = "TDF/Data/TowerData")]

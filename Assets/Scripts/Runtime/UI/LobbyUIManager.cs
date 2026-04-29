@@ -51,10 +51,55 @@ namespace TDF.Runtime.UI
         // ─────────────────────────────────────────────────────────────────
         private void Start()
         {
+#if UNITY_EDITOR
+            // 에디터에서 테스트 중일 때 인스펙터 리스트가 비어있다면 자동 색인 후 할당
+            if (allStages == null)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:CampaignData");
+                if (guids.Length > 0)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                    allStages = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignData>(path);
+                    Debug.Log($"[LobbyUIManager] allStages가 비어 있어 자동으로 {allStages.name} 할당 완료!");
+                }
+            }
+
+            if (shopItems == null || shopItems.Count == 0)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ShopItemData");
+                shopItems = new List<ShopItemData>();
+                foreach (var g in guids) shopItems.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<ShopItemData>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)));
+            }
+
+            if (achievements == null || achievements.Count == 0)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:AchievementData");
+                achievements = new List<AchievementData>();
+                foreach (var g in guids) achievements.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<AchievementData>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)));
+            }
+
+            if (events == null || events.Count == 0)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:EventData");
+                events = new List<EventData>();
+                foreach (var g in guids) events.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<EventData>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)));
+            }
+#endif
+
             if (UserDataManager.Instance == null) return;
             foreach (var a in achievements)
                 if (a != null) UserDataManager.Instance.RegisterAchievement(a.achievementId, a.achievementName);
             UserDataManager.Instance.Save();
+
+            // 현재 씬 이름에 따라 상태 강제 동기화 (씬 분리 대응)
+            string sceneName = SceneManager.GetActiveScene().name;
+            if (sceneName == "Lobby_Stage") currentScreen = LobbyScreen.StageGroups;
+            else if (sceneName == "Lobby_Shop") currentScreen = LobbyScreen.Shop;
+            else if (sceneName == "Lobby_Achievement") currentScreen = LobbyScreen.Achievement;
+            else if (sceneName == "Lobby_Leaderboard") currentScreen = LobbyScreen.Leaderboard;
+            else if (sceneName == "Lobby_Event") currentScreen = LobbyScreen.Event;
+            else if (sceneName == "Lobby_Main" || sceneName == "Lobby") currentScreen = LobbyScreen.Main;
+            // StageDetail은 StageGroups에서 내부 상태로 전환됨
         }
 
         private void InitStyles()
@@ -117,7 +162,11 @@ namespace TDF.Runtime.UI
             GUI.color = new Color(0.75f, 0.18f, 0.18f);
             bool c = GUI.Button(new Rect(30, 1000, 260, 60), "← 메인메뉴", _smallBtn);
             GUI.color = Color.white;
-            if (c) { currentScreen = LobbyScreen.Main; scroll = Vector2.zero; }
+            if (c) 
+            {
+                // 씬 이동으로 메인 복귀
+                SceneManager.LoadScene("Lobby_Main");
+            }
             return c;
         }
 
@@ -157,7 +206,27 @@ namespace TDF.Runtime.UI
             ColorBtn(new Color(0.78f, 0.28f, 0.08f), new Rect(cx, y, bw * 2 + gap, bh), "🎉  EVENT", () => Go(LobbyScreen.Event));
         }
 
-        void Go(LobbyScreen s) { currentScreen = s; scroll = Vector2.zero; }
+        void Go(LobbyScreen s) 
+        { 
+            scroll = Vector2.zero; 
+            if (s == LobbyScreen.StageDetail) 
+            {
+                currentScreen = s; // Detail은 Stage 씬 내부에서만 전환
+                return;
+            }
+
+            string targetScene = "Lobby_Main";
+            switch(s)
+            {
+                case LobbyScreen.Main: targetScene = "Lobby_Main"; break;
+                case LobbyScreen.StageGroups: targetScene = "Lobby_Stage"; break;
+                case LobbyScreen.Shop: targetScene = "Lobby_Shop"; break;
+                case LobbyScreen.Achievement: targetScene = "Lobby_Achievement"; break;
+                case LobbyScreen.Leaderboard: targetScene = "Lobby_Leaderboard"; break;
+                case LobbyScreen.Event: targetScene = "Lobby_Event"; break;
+            }
+            SceneManager.LoadScene(targetScene);
+        }
 
         void GoToNextChallenge()
         {
@@ -174,10 +243,22 @@ namespace TDF.Runtime.UI
 
         void LoadStage(int flatIndex)
         {
-            if (allStages == null) return;
+            if (allStages == null) 
+            {
+                Debug.LogError("[LobbyUIManager] allStages 데이터가 없습니다! 인스펙터를 확인해주세요.");
+                return;
+            }
             GameManager.staticTestCampaign   = allStages;
             GameManager.staticTestStageIndex = flatIndex;
-            SceneManager.LoadScene(gameSceneName);
+            
+            if (Application.CanStreamedLevelBeLoaded(gameSceneName))
+            {
+                SceneManager.LoadScene(gameSceneName);
+            }
+            else
+            {
+                Debug.LogError($"[LobbyUIManager] '{gameSceneName}' 씬을 로드할 수 없습니다. 상단 메뉴 Tools > TDF > Fix Build Settings (Add Scenes) 를 다시 한 번 눌러주세요!");
+            }
         }
 
         // ═════════════════════════════════════════════════════════════════

@@ -8,14 +8,32 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/Lobby.unity
     guid: 6aedcda18fb910a4993565ea7e662fcf
-  - enabled: 0
+  - enabled: 1
+    path: Assets/Scenes/Lobby_Main.unity
+    guid: b81efa03524ebe547af1467a33f2e43c
+  - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/gameplay.unity
     guid: c45c90253299c614ca71ff6a2610727e
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/main.unity
     guid: 4ac30c0660c89ae4399fb66c2fcd1a00
+  - enabled: 1
+    path: Assets/Scenes/Lobby_Stage.unity
+    guid: 86f2614cd71e5164eb8e88c26e7051fa
+  - enabled: 1
+    path: Assets/Scenes/Lobby_Shop.unity
+    guid: 1cb5ad6b5ba09a741a033c35ef9980c6
+  - enabled: 1
+    path: Assets/Scenes/Lobby_Achievement.unity
+    guid: 250e9075500394d478a6d77d7a1c5602
+  - enabled: 1
+    path: Assets/Scenes/Lobby_Leaderboard.unity
+    guid: 96f70344c6454574d82005aad2a80b06
+  - enabled: 1
+    path: Assets/Scenes/Lobby_Event.unity
+    guid: a2252a0334d88d24d80ba115706c1d7e
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

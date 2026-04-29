@@ -15,7 +15,9 @@ MonoBehaviour:
   achievementId: 0101-01
   achievementName: 1-1clear
   description: 1-1 clear
+  conditionType: 3
   targetValue: 0
+  targetStringData: Stage1-1
   rewardGold: 0
   rewardGems: 10
   achievementIcon: {fileID: 0}

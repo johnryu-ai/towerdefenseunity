@@ -545,8 +545,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Runtime.UI.LobbyUIManager
   gameSceneName: SampleScene
   allStages: {fileID: 11400000, guid: f2d9dfd09fc6f254694d158cf439e45e, type: 2}
-  shopItems: []
-  achievements: []
+  shopItems:
+  - {fileID: 11400000, guid: faae89e2b2ee8f84a876928bb570191e, type: 2}
+  achievements:
+  - {fileID: 11400000, guid: ce8eb636c633a714ab4aeb417a185210, type: 2}
   events: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

@@ -20,12 +20,31 @@ namespace TDF.Runtime.Entities
             cachedTransform = transform;
         }
 
-        public void Initialize(MonsterController targetMonster, float dmg, AttackAttribute attr, GameObject hitEffect)
+        public void Initialize(MonsterController targetMonster, float dmg, AttackAttribute attr, GameObject hitEffect, Sprite projSprite = null)
         {
             target = targetMonster;
             damage = dmg;
             attribute = attr;
             hitEffectPrefab = hitEffect;
+
+            if (projSprite != null)
+            {
+                var sr = GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.sprite = projSprite;
+                    // 타워/몬스터가 동적 정렬(1000~2000+)을 사용하므로 발사체는 이보다 무조건 높은 30000 할당
+                    sr.sortingOrder = 30000; 
+                }
+            }
+
+            // 초기 방향 설정 (생성 직후 0도 방향으로 튀는 현상 방지)
+            if (target != null)
+            {
+                Vector3 dir = (target.transform.position - transform.position).normalized;
+                float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                transform.rotation = Quaternion.Euler(0, 0, angle);
+            }
         }
 
         private void Update()

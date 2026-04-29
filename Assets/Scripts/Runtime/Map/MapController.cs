@@ -28,25 +28,57 @@ namespace TDF.Runtime.Map
 
         private void Start()
         {
-            // 모바일 16:9 FHD(1920x1080) 대응: 1타일 135px -> 세로 8칸
+            // 전체 화면 해상도를 FHD(1920x1080)로 고정
+            Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
+
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;
-                Camera.main.orthographicSize = 4f; 
                 Camera.main.backgroundColor = new Color(0.2f, 0.2f, 0.2f); // 남는 영역 회색
             }
         }
 
         public void GenerateMap(MapData mapData)
         {
-            if (mapData == null || tilePrefab == null)
+            if (mapData == null)
             {
-                Debug.LogError("MapController: MapData 또는 TilePrefab이 없습니다.");
+                Debug.LogError("MapController: MapData가 없습니다.");
                 return;
+            }
+
+            if (tilePrefab == null)
+            {
+                Debug.LogWarning("MapController: tilePrefab이 할당되지 않아 코드로 기본 타일을 생성합니다.");
+                tilePrefab = new GameObject("DefaultTilePrefab");
+                var sr = tilePrefab.AddComponent<SpriteRenderer>();
+                
+                // 1x1 유닛 크기의 흰색 스프라이트 생성
+                Texture2D tex = new Texture2D(100, 100);
+                Color[] colors = new Color[100 * 100];
+                for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
+                tex.SetPixels(colors);
+                tex.Apply();
+                sr.sprite = Sprite.Create(tex, new Rect(0, 0, 100, 100), new Vector2(0.5f, 0.5f), 100f);
+                
+                tilePrefab.SetActive(false); // 프리팹처럼 안보이게 숨김
             }
 
             currentMapData = mapData;
             spawnedTiles = new GameObject[mapData.gridWidth, mapData.gridHeight];
+
+            // ── 카메라 자동 스케일링 (위아래 꽉 차게 중앙 정렬) ──
+            float mapWorldHeight = mapData.gridHeight * TILE_SIZE;
+            
+            if (Camera.main != null)
+            {
+                Camera.main.orthographic = true;
+                // 위아래로 꽉 차게 만들기 위해 세로 길이의 절반을 orthographicSize로 설정
+                Camera.main.orthographicSize = mapWorldHeight / 2f;
+                
+                // 맵이 정중앙에 위치하도록 카메라 위치 초기화 (오프셋 없음)
+                Vector3 camPos = Camera.main.transform.position;
+                Camera.main.transform.position = new Vector3(0, 0, camPos.z);
+            }
 
             // 기존 타일 초기화
             if (tileContainer == null)
@@ -69,6 +101,7 @@ namespace TDF.Runtime.Map
                 {
                     Vector3 position = new Vector3(offsetX + (x * TILE_SIZE), offsetY - (y * TILE_SIZE), 0);
                     GameObject tileObj = Instantiate(tilePrefab, position, Quaternion.identity, tileContainer);
+                    tileObj.SetActive(true);
                     tileObj.name = $"Tile_{x}_{y}";
                     
                     TileType type = mapData.GetTileAt(x, y);
@@ -89,11 +122,23 @@ namespace TDF.Runtime.Map
             {
                 GameObject bgObj = new GameObject("Background");
                 bgObj.transform.SetParent(this.transform);
-                // 맵 크기에 맞게 조절
+                // 맵 화면 정중앙에 배치 (카메라 기준 중앙이 Vector3.zero)
                 bgObj.transform.position = Vector3.zero;
                 SpriteRenderer bgSr = bgObj.AddComponent<SpriteRenderer>();
                 bgSr.sprite = mapData.backgroundSprite;
-                bgSr.sortingOrder = -10; // 타일보다 뒤에 그려지도록
+                bgSr.sortingOrder = 5; // 타일(0) 위에, 유닛들(10+) 아래에 그려지도록 설정
+
+                // 1920x1080 (FHD) 비율에 맞게 정확히 덮어씌우기 위한 스케일 계산
+                if (Camera.main != null)
+                {
+                    float screenHeightUnits = Camera.main.orthographicSize * 2f;
+                    float screenWidthUnits = screenHeightUnits * (1920f / 1080f);
+
+                    float scaleX = screenWidthUnits / bgSr.sprite.bounds.size.x;
+                    float scaleY = screenHeightUnits / bgSr.sprite.bounds.size.y;
+
+                    bgObj.transform.localScale = new Vector3(scaleX, scaleY, 1f);
+                }
             }
         }
 

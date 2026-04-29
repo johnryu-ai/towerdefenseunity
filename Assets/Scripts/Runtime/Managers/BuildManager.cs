@@ -165,19 +165,21 @@ namespace TDF.Runtime.Managers
                 {
                     foreach (var tower in availableTowers)
                     {
-                        if (tower != null) validTowers++;
+                        if (tower != null && UserDataManager.Instance != null && UserDataManager.Instance.IsTowerUnlocked(tower.towerId)) validTowers++;
                     }
                 }
                 
                 if (validTowers == 0)
                 {
-                    GUILayout.Label("No Towers", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
+                    GUILayout.Label("No Unlocked Towers", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
                 }
                 else
                 {
                     foreach (var tower in availableTowers)
                     {
                         if (tower == null) continue;
+                        if (UserDataManager.Instance != null && !UserDataManager.Instance.IsTowerUnlocked(tower.towerId)) continue;
+                        
                         int cost = tower.upgradeTiers.Count > 0 ? tower.upgradeTiers[0].buildOrUpgradeCost : 0;
                         if (GUILayout.Button($"{tower.towerName}\n{cost}G", buttonStyle, GUILayout.Height(60)))
                         {

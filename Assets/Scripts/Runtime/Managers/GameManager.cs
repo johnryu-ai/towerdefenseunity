@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using TDF.Core.Data;
 
@@ -27,7 +28,10 @@ namespace TDF.Runtime.Managers
 
         [Header("Scene Names")]
         [Tooltip("메인메뉴(로비) 씬 이름. Build Settings에 등록된 씬 이름과 일치해야 합니다.")]
-        public string mainMenuSceneName = "LobbyScene";
+        public string mainMenuSceneName = "Lobby_Main";
+
+        [Header("Achievements")]
+        public List<AchievementData> allAchievements = new List<AchievementData>();
 
         public static CampaignData staticTestCampaign;
         public static int staticTestStageIndex = 0;
@@ -59,6 +63,18 @@ namespace TDF.Runtime.Managers
 
         private void Start()
         {
+#if UNITY_EDITOR
+            if (allAchievements == null || allAchievements.Count == 0)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:AchievementData");
+                allAchievements = new List<AchievementData>();
+                foreach (var g in guids) 
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                    allAchievements.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<AchievementData>(path));
+                }
+            }
+#endif
             InitializeGame();
         }
 
@@ -151,13 +167,8 @@ namespace TDF.Runtime.Managers
             }
             else
             {
-                Debug.Log("캠페인이 완료되었습니다!");
-                staticTestCampaign = null;
-                staticTestStageIndex = 0;
-                
-                #if UNITY_EDITOR
-                UnityEditor.EditorApplication.isPlaying = false;
-                #endif
+                Debug.Log("캠페인이 완료되었습니다! 메인 메뉴로 돌아갑니다.");
+                GoToMainMenu();
             }
         }
 
@@ -204,7 +215,45 @@ namespace TDF.Runtime.Managers
                         goldRemaining:    CurrentGold,
                         clearTimeSeconds: Mathf.Max(0, clearTimeSec)
                     );
+                    
+                    // 메타 재화(로비 상점용 골드 및 젬) 지급
+                    int score = (CurrentGold * 10) + (CurrentHP * 50) + Mathf.Max(0, 10000 - (clearTimeSec * 20));
+                    int rewardGold = score / 10;
+                    int rewardGems = 5;
+                    UserDataManager.Instance.AddCurrency(gold: rewardGold, gems: rewardGems);
+                    
                     UserDataManager.Instance.ClearPlaySession();
+
+                    // ── 업적 달성 검증 ──
+                    if (allAchievements != null)
+                    {
+                        foreach (var ach in allAchievements)
+                        {
+                            if (ach == null) continue;
+                            
+                            UserDataManager.Instance.RegisterAchievement(ach.achievementId, ach.achievementName);
+                            var prog = UserDataManager.Instance.GetAchievementProgress(ach.achievementId);
+                            if (prog != null && prog.completed) continue;
+
+                            switch (ach.conditionType)
+                            {
+                                case AchievementConditionType.TotalStagesCleared:
+                                    UserDataManager.Instance.IncrementAchievement(ach.achievementId, ach.targetValue, 1);
+                                    break;
+                                case AchievementConditionType.TotalGoldEarned:
+                                    // 누적 골드 획득량 달성
+                                    UserDataManager.Instance.IncrementAchievement(ach.achievementId, ach.targetValue, rewardGold);
+                                    break;
+                                case AchievementConditionType.SpecificStageClear:
+                                    // 특정 스테이지(이름) 클리어 시
+                                    if (currentStageData.name == ach.targetStringData)
+                                    {
+                                        UserDataManager.Instance.UpdateAchievementProgress(ach.achievementId, ach.targetValue, ach.targetValue);
+                                    }
+                                    break;
+                            }
+                        }
+                    }
                 }
             }
             else if (CurrentState == GameState.GameOver)
@@ -213,6 +262,22 @@ namespace TDF.Runtime.Managers
                 if (UserDataManager.Instance != null)
                 {
                     UserDataManager.Instance.ClearPlaySession();
+                }
+            }
+        }
+
+        public void ReportMonsterKilled()
+        {
+            if (UserDataManager.Instance == null || allAchievements == null) return;
+
+            foreach (var ach in allAchievements)
+            {
+                if (ach == null) continue;
+
+                if (ach.conditionType == AchievementConditionType.TotalMonstersKilled)
+                {
+                    UserDataManager.Instance.RegisterAchievement(ach.achievementId, ach.achievementName);
+                    UserDataManager.Instance.IncrementAchievement(ach.achievementId, ach.targetValue, 1);
                 }
             }
         }

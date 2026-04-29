@@ -72,7 +72,27 @@ namespace TDF.Editor
                 es.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
             }
 
-            Debug.Log("테스트 씬 하이라키 구조가 성공적으로 생성되었습니다. GameManager에 맵 데이터를 할당하고 Play를 눌러주세요.");
+            // GameManager에 테스트용 데이터 자동 주입
+            GameManager gm = coreObj.GetComponent<GameManager>();
+            string[] campaignGuids = UnityEditor.AssetDatabase.FindAssets("t:CampaignData");
+            if (campaignGuids.Length > 0)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(campaignGuids[0]);
+                gm.currentCampaign = UnityEditor.AssetDatabase.LoadAssetAtPath<TDF.Core.Data.CampaignData>(path);
+                gm.currentStageIndex = 0;
+            }
+            else
+            {
+                string[] mapGuids = UnityEditor.AssetDatabase.FindAssets("t:MapData");
+                if (mapGuids.Length > 0)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(mapGuids[0]);
+                    gm.currentMapData = UnityEditor.AssetDatabase.LoadAssetAtPath<TDF.Core.Data.MapData>(path);
+                }
+            }
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+            Debug.Log("테스트 씬 하이라키 구조가 성공적으로 생성 및 저장되었습니다. 이제 언제든 Play를 누르면 실행됩니다.");
         }
     }
 }

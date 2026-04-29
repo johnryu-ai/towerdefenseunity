@@ -78,5 +78,88 @@ namespace TDF.Editor
             EditorUtility.SetDirty(lm);
             Debug.Log("Lobby Scene Setup Complete!");
         }
+
+        [MenuItem("Tools/TDF/Cleanup UGUI Lobby (Use IMGUI)")]
+        public static void CleanupUGUI()
+        {
+            var canvas = GameObject.Find("LobbyCanvas");
+            if (canvas != null) GameObject.DestroyImmediate(canvas);
+
+            var manager = GameObject.Find("LobbyManager");
+            if (manager != null) GameObject.DestroyImmediate(manager);
+
+            var eventSystem = GameObject.Find("EventSystem");
+            if (eventSystem != null) GameObject.DestroyImmediate(eventSystem);
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+            Debug.Log("UGUI Lobby elements removed. IMGUI LobbyUIManager will now be visible.");
+        }
+
+        [MenuItem("Tools/TDF/Fix Build Settings (Add Scenes)")]
+        public static void FixBuildSettings()
+        {
+            var scenes = new List<EditorBuildSettingsScene>();
+            scenes.Add(new EditorBuildSettingsScene("Assets/Scenes/Lobby.unity", true));
+            scenes.Add(new EditorBuildSettingsScene("Assets/Scenes/SampleScene.unity", true));
+            
+            // 다른 씬들이 있으면 추가
+            if (System.IO.File.Exists("Assets/Scenes/gameplay.unity"))
+                scenes.Add(new EditorBuildSettingsScene("Assets/Scenes/gameplay.unity", true));
+            if (System.IO.File.Exists("Assets/Scenes/main.unity"))
+                scenes.Add(new EditorBuildSettingsScene("Assets/Scenes/main.unity", true));
+
+            EditorBuildSettings.scenes = scenes.ToArray();
+            Debug.Log("Scenes have been successfully added to Build Settings!");
+        }
+
+        [MenuItem("Tools/TDF/Split Lobby Into Separate Scenes")]
+        public static void SplitLobbyIntoScenes()
+        {
+            string[] newSceneNames = { "Lobby_Main", "Lobby_Stage", "Lobby_Shop", "Lobby_Achievement", "Lobby_Leaderboard", "Lobby_Event" };
+            string sceneDir = "Assets/Scenes";
+            
+            // 현재 활성화된 씬 저장
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+            
+            // 기존 빌드 세팅 가져오기
+            List<EditorBuildSettingsScene> buildScenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+
+            // 로비 씬 찾기
+            string originalLobbyPath = $"{sceneDir}/Lobby.unity";
+            if (!System.IO.File.Exists(originalLobbyPath))
+            {
+                Debug.LogError("Lobby.unity 씬을 찾을 수 없습니다. 현재 씬을 Lobby로 저장해주세요.");
+                return;
+            }
+
+            foreach (var name in newSceneNames)
+            {
+                string newPath = $"{sceneDir}/{name}.unity";
+                
+                // 씬 복사
+                if (AssetDatabase.CopyAsset(originalLobbyPath, newPath))
+                {
+                    Debug.Log($"씬 복사 성공: {newPath}");
+                    
+                    // 빌드 세팅에 없으면 추가
+                    bool exists = false;
+                    foreach (var s in buildScenes)
+                    {
+                        if (s.path == newPath) exists = true;
+                    }
+                    if (!exists)
+                    {
+                        buildScenes.Add(new EditorBuildSettingsScene(newPath, true));
+                    }
+                }
+            }
+
+            EditorBuildSettings.scenes = buildScenes.ToArray();
+            AssetDatabase.Refresh();
+            Debug.Log("로비 하위 메뉴들이 개별 씬으로 성공적으로 분리 및 Build Settings에 등록되었습니다!");
+            
+            // 메인 로비 씬 열기
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene($"{sceneDir}/Lobby_Main.unity");
+        }
     }
 }

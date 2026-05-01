@@ -12,5 +12,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fda5615c56ca48e46aa4f19d21b766d6, type: 3}
   m_Name: Wave1-3
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.WaveData
-  linkedMapData: {fileID: 0}
-  rounds: []
+  linkedMapData: {fileID: 11400000, guid: 79cca7581fba27545a87515bf50bac13, type: 2}
+  rounds:
+  - roundNumber: 1
+    clearReward: 0
+    nextRoundDelay: 1
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: ce158d7000c77664f95f2e899c7d31a7, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 10
+      spawnInterval: 0.5
+      startDelay: 0
+      customWaypoints: []
+    - monsterToSpawn: {fileID: 11400000, guid: 20f994cf3132e1848bf798d11c2fb5aa, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 10
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []
+  - roundNumber: 2
+    clearReward: 0
+    nextRoundDelay: 3
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: b7dd84b8f4da4f149a56062e11831e9b, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 10
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []
+  - roundNumber: 3
+    clearReward: 0
+    nextRoundDelay: 5
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: b7dd84b8f4da4f149a56062e11831e9b, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 10
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []

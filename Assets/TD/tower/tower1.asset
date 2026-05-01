@@ -25,6 +25,7 @@ MonoBehaviour:
     attackSpeed: 1
     sellPrice: 80
     manaCost: 0
+    projectileSprite: {fileID: 0}
   - tierLevel: 1
     buildOrUpgradeCost: 100
     range: 2
@@ -32,6 +33,7 @@ MonoBehaviour:
     attackSpeed: 2
     sellPrice: 160
     manaCost: 0
+    projectileSprite: {fileID: 0}
   - tierLevel: 2
     buildOrUpgradeCost: 120
     range: 3
@@ -39,11 +41,23 @@ MonoBehaviour:
     attackSpeed: 3
     sellPrice: 256
     manaCost: 0
+    projectileSprite: {fileID: 0}
   assets:
     idleSprite: {fileID: 0}
     attackSprite: {fileID: 0}
+    attackSprites8Dir:
+      up: {fileID: 0}
+      down: {fileID: 0}
+      left: {fileID: 0}
+      right: {fileID: 0}
+      upLeft: {fileID: 0}
+      upRight: {fileID: 0}
+      downLeft: {fileID: 0}
+      downRight: {fileID: 0}
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
     prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
     projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
     hitEffectPrefab: {fileID: 0}
+    visualScale: 1
+    projectileScale: 0.5

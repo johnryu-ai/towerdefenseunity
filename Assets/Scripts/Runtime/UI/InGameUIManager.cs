@@ -78,9 +78,24 @@ namespace TDF.Runtime.UI
             
             if (state == GameState.GameOver)
             {
-                GUIStyle centerStyle = new GUIStyle(GUI.skin.label) { fontSize = 100, alignment = TextAnchor.MiddleCenter };
+                // 배경 어둡게 처리
+                Color oldColor = GUI.color;
+                GUI.color = new Color(0, 0, 0, 0.85f);
+                GUI.DrawTexture(new Rect(0, 0, 1920, 1080), Texture2D.whiteTexture);
+                GUI.color = oldColor;
+
+                GUIStyle centerStyle = new GUIStyle(GUI.skin.label) { fontSize = 120, alignment = TextAnchor.MiddleCenter };
                 centerStyle.normal.textColor = Color.red;
-                GUI.Label(new Rect(0, 0, 1920, 1080), "GAME OVER", centerStyle);
+                GUI.Label(new Rect(0, 300, 1920, 200), "GAME OVER", centerStyle);
+
+                // 메인 메뉴로 이동 버튼
+                GUILayout.BeginArea(new Rect(710, 600, 500, 300));
+                GUIStyle btnStyle = new GUIStyle(GUI.skin.button) { fontSize = 45 };
+                if (GUILayout.Button("🏠 메인 메뉴로", btnStyle, GUILayout.Height(100)))
+                {
+                    GameManager.Instance.GoToMainMenu();
+                }
+                GUILayout.EndArea();
             }
             else if (state == GameState.Story)
             {

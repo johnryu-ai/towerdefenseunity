@@ -12,10 +12,29 @@ namespace TDF.Runtime.Entities
         private MonsterData data;
         private StatusEffectManager statusEffects;
         private SpriteRenderer spriteRenderer;
+        private Animator animator; // 애니메이터 캐싱
+        private float animTime = 0f;
+        private AnimationClip currentPlayingClip;
+
+        private void PlayClip(AnimationClip clip)
+        {
+            if (clip == null) return;
+            if (currentPlayingClip != clip)
+            {
+                currentPlayingClip = clip;
+                animTime = 0f;
+            }
+            animTime += Time.deltaTime;
+            if (clip.isLooping) animTime %= clip.length;
+            else animTime = Mathf.Clamp(animTime, 0f, clip.length);
+            
+            clip.SampleAnimation(gameObject, animTime);
+        }
 
         private float currentHealth;
         private List<Vector2> waypoints;
         private int currentWaypointIndex;
+        private bool isProcessed = false; // 중복 처리 방지 플래그
 
         public static List<MonsterController> ActiveMonsters = new List<MonsterController>();
 
@@ -44,6 +63,7 @@ namespace TDF.Runtime.Entities
             data = monsterData;
             waypoints = pathWaypoints;
             currentWaypointIndex = 0;
+            isProcessed = false; // 스폰 시 플래그 초기화
 
             if (data != null && data.stats != null)
             {
@@ -52,19 +72,28 @@ namespace TDF.Runtime.Entities
 
             if (data != null && data.assets != null)
             {
-                // 스케일 적용
-                transform.localScale = Vector3.one * data.assets.visualScale;
+                if (data.assets.moveSprite != null)
+                {
+                    spriteRenderer.sprite = data.assets.moveSprite;
+                }
+                else if (data.assets.moveAnim != null)
+                {
+                    data.assets.moveAnim.SampleAnimation(gameObject, 0f);
+                }
+
+                // 어둡게 보이는 문제 해결: 머티리얼 강제 설정
+                spriteRenderer.material = new Material(Shader.Find("Sprites/Default"));
+                spriteRenderer.color = Color.white;
 
                 // 하단 정렬 (발 위치를 타일 하단에 맞춤)
                 // 몬스터는 경로 이동 중이므로 초기 위치 설정 시 오프셋 반영
                 transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f + (data.assets.visualScale * 0.5f), transform.position.z);
 
-                if (data.assets.moveSprite != null)
+                // 애니메이터 설정
+                if (data.assets.animatorController != null)
                 {
-                    spriteRenderer.sprite = data.assets.moveSprite;
-                    // 어둡게 보이는 문제 해결: 머티리얼 강제 설정
-                    spriteRenderer.material = new Material(Shader.Find("Sprites/Default"));
-                    spriteRenderer.color = Color.white;
+                    if (animator == null) animator = gameObject.AddComponent<Animator>();
+                    animator.runtimeAnimatorController = data.assets.animatorController;
                 }
             }
 
@@ -79,31 +108,25 @@ namespace TDF.Runtime.Entities
             if (statusEffects.IsStunned) return;
 
             Move();
+
+            if (data != null && data.assets != null && data.assets.animatorController == null && data.assets.moveAnim != null)
+            {
+                PlayClip(data.assets.moveAnim);
+            }
         }
 
         private void LateUpdate()
         {
-            // 애니메이터 덮어씌우기 방지 및 해상도가 큰 스프라이트의 정규화 처리
             if (data != null && data.assets != null)
             {
                 if (spriteRenderer != null && spriteRenderer.sprite != null)
                 {
-                    // 스프라이트의 가로/세로 중 가장 큰 원본 사이즈 추출
                     float maxBound = Mathf.Max(spriteRenderer.sprite.bounds.size.x, spriteRenderer.sprite.bounds.size.y);
                     if (maxBound > 0.001f)
                     {
-                        // 원본 크기가 달라도 visualScale(타일 크기) 안에 들어가도록 비율 조정
-                        float normalizedScale = data.assets.visualScale / maxBound;
-                        transform.localScale = Vector3.one * normalizedScale;
+                        float currentScale = data.assets.visualScale / maxBound;
+                        transform.localScale = Vector3.one * currentScale;
                     }
-                    else
-                    {
-                        transform.localScale = Vector3.one * data.assets.visualScale;
-                    }
-                }
-                else
-                {
-                    transform.localScale = Vector3.one * data.assets.visualScale;
                 }
             }
 
@@ -142,6 +165,8 @@ namespace TDF.Runtime.Entities
 
         public void TakeDamage(float amount)
         {
+            if (isProcessed) return; // 이미 죽었거나 기지에 도착한 경우 데미지 무시
+
             currentHealth -= amount;
             if (currentHealth <= 0)
             {
@@ -151,12 +176,22 @@ namespace TDF.Runtime.Entities
 
         private void ReachBase()
         {
-            GameManager.Instance.TakeDamage(data.stats.baseDamage);
+            if (isProcessed) return;
+            isProcessed = true;
+
+            if (data != null && data.stats != null)
+            {
+                Debug.Log($"[Base Hit] {data.monsterName} (ID:{gameObject.GetInstanceID()}) 기지 도착! 데미지: {data.stats.baseDamage}");
+                GameManager.Instance.TakeDamage(data.stats.baseDamage);
+            }
             ReturnToPool();
         }
 
         private void Die()
         {
+            if (isProcessed) return;
+            isProcessed = true;
+
             GameManager.Instance.AddGold(data.stats.killReward);
             GameManager.Instance.ReportMonsterKilled();
 

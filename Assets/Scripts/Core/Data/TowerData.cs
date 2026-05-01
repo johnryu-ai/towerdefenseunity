@@ -20,6 +20,7 @@ namespace TDF.Core.Data
 
         [Header("Visuals")]
         public Sprite projectileSprite; // 업그레이드 상태별 발사체 이미지
+        public AnimationClip projectileAnim; // 발사체 애니메이션 (단일 파일)
     }
 
     [System.Serializable]
@@ -43,6 +44,7 @@ namespace TDF.Core.Data
         public DirectionalSprites attackSprites8Dir; // 8방향 공격 모션용
         public AnimationClip idleAnim;
         public AnimationClip attackAnim;
+        public RuntimeAnimatorController animatorController; // 애니메이션 컨트롤러 추가
         public GameObject prefab;
         public GameObject projectilePrefab; // 기본 발사체 프리팹 (스프라이트는 tier에서 오버라이드)
         public GameObject hitEffectPrefab;

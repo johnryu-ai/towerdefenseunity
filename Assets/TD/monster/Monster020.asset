@@ -30,3 +30,4 @@ MonoBehaviour:
     dieSprite: {fileID: 0}
     moveAnim: {fileID: 0}
     prefab: {fileID: 5462296911220689134, guid: cc64eaa1e5cb3014f96b98080e48924f, type: 3}
+    visualScale: 1

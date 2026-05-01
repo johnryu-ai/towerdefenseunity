@@ -20,6 +20,28 @@ namespace TDF.Runtime.Entities
         // 선택 및 사거리 시각화
         private LineRenderer currentRangeLine;
         private LineRenderer nextRangeLine;
+        
+        private Animator animator; // 애니메이터 캐싱
+        private float animTime = 0f;
+        private AnimationClip currentPlayingClip;
+
+        private void PlayClip(AnimationClip clip)
+        {
+            if (clip == null) return;
+
+            if (currentPlayingClip != clip)
+            {
+                currentPlayingClip = clip;
+                animTime = 0f;
+            }
+
+            animTime += Time.deltaTime;
+            
+            if (clip.isLooping) animTime %= clip.length;
+            else animTime = Mathf.Clamp(animTime, 0f, clip.length);
+
+            clip.SampleAnimation(gameObject, animTime);
+        }
 
         private void Awake()
         {
@@ -35,14 +57,14 @@ namespace TDF.Runtime.Entities
             obj.transform.localPosition = Vector3.zero;
 
             LineRenderer lr = obj.AddComponent<LineRenderer>();
-            lr.startWidth = 0.5f;
-            lr.endWidth = 0.5f;
+            lr.startWidth = 0.1f;
+            lr.endWidth = 0.1f;
             lr.material = new Material(Shader.Find("Sprites/Default"));
             lr.startColor = color;
             lr.endColor = color;
-            lr.useWorldSpace = false;
+            lr.useWorldSpace = true; // 부모 스케일 영향을 받지 않도록 월드 좌표 사용
             lr.positionCount = 51; // 원을 그릴 점의 갯수
-            lr.sortingOrder = 20;
+            lr.sortingOrder = 5000; // 모든 유닛보다 항상 위에 표시
             lr.gameObject.SetActive(false);
 
             return lr;
@@ -80,11 +102,12 @@ namespace TDF.Runtime.Entities
         {
             float x, y;
             float angle = 0f;
+            Vector3 center = transform.position;
             for (int i = 0; i < 51; i++)
             {
                 x = Mathf.Sin(Mathf.Deg2Rad * angle) * radius;
                 y = Mathf.Cos(Mathf.Deg2Rad * angle) * radius;
-                lr.SetPosition(i, new Vector3(x, y, 0));
+                lr.SetPosition(i, new Vector3(center.x + x, center.y + y, 0));
                 angle += (360f / 50f);
             }
         }
@@ -103,25 +126,31 @@ namespace TDF.Runtime.Entities
             
             if (data.assets != null)
             {
-                // 스케일 적용
-                transform.localScale = Vector3.one * data.assets.visualScale;
+                var sr = GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    // 애니메이션만 등록될 경우를 대비해 스프라이트가 비어있어도 머티리얼과 색상은 강제 세팅
+                    sr.material = new Material(Shader.Find("Sprites/Default"));
+                    sr.color = Color.white;
+
+                    if (data.assets.idleSprite != null) {
+                        sr.sprite = data.assets.idleSprite;
+                    } else if (data.assets.idleAnim != null) {
+                        data.assets.idleAnim.SampleAnimation(gameObject, 0f); // 첫 프레임 강제 적용
+                    }
+                    UpdateSortingOrder();
+                }
 
                 // 하단 정렬 (타일의 하단 경계에 발을 맞춤)
                 // 타일의 월드 좌표는 중심점이므로, 하단으로 내렸다가 스케일 절반만큼 위로 올림
                 Vector3 centerPos = transform.position;
                 transform.position = new Vector3(centerPos.x, centerPos.y - 0.5f + (data.assets.visualScale * 0.5f), centerPos.z);
 
-                if (data.assets.idleSprite != null)
+                // 애니메이터 설정
+                if (data.assets.animatorController != null)
                 {
-                    var sr = GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        sr.sprite = data.assets.idleSprite;
-                        // 어둡게 보이는 문제 해결: 머티리얼을 기본 언릿 스프라이트용으로 강제 설정
-                        sr.material = new Material(Shader.Find("Sprites/Default"));
-                        sr.color = Color.white;
-                        UpdateSortingOrder();
-                    }
+                    if (animator == null) animator = gameObject.AddComponent<Animator>();
+                    animator.runtimeAnimatorController = data.assets.animatorController;
                 }
             }
         }
@@ -180,38 +209,39 @@ namespace TDF.Runtime.Entities
 
         private void LateUpdate()
         {
-            // 애니메이터 덮어씌우기 방지 및 해상도가 큰 스프라이트의 정규화 처리
             if (data != null && data.assets != null)
             {
                 var sr = GetComponent<SpriteRenderer>();
                 if (sr != null && sr.sprite != null)
                 {
-                    // 스프라이트의 가로/세로 중 가장 큰 원본 사이즈 추출
+                    // 현재 출력중인 스프라이트(고정 이미지, 8방향, 애니메이션 등)의 실제 크기를 읽어와 1타일 꽉 차게 보정
                     float maxBound = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y);
                     if (maxBound > 0.001f)
                     {
-                        // 원본 크기가 달라도 visualScale(타일 크기) 안에 들어가도록 비율 조정
-                        float normalizedScale = data.assets.visualScale / maxBound;
-                        transform.localScale = Vector3.one * normalizedScale;
+                        float currentScale = data.assets.visualScale / maxBound;
+                        transform.localScale = Vector3.one * currentScale;
                     }
-                    else
-                    {
-                        transform.localScale = Vector3.one * data.assets.visualScale;
-                    }
-                }
-                else
-                {
-                    transform.localScale = Vector3.one * data.assets.visualScale;
                 }
             }
         }
 
         private void RevertToIdle()
         {
-            if (data.assets != null && data.assets.idleSprite != null)
+            if (data.assets.animatorController != null)
             {
-                var sr = GetComponent<SpriteRenderer>();
-                if (sr != null) sr.sprite = data.assets.idleSprite;
+                if (animator != null) animator.SetBool("IsAttacking", false);
+            }
+            else if (data.assets.idleAnim != null)
+            {
+                PlayClip(data.assets.idleAnim);
+            }
+            else // 애니메이션이 없을 때만 고정 이미지 세팅
+            {
+                if (data.assets != null && data.assets.idleSprite != null)
+                {
+                    var sr = GetComponent<SpriteRenderer>();
+                    if (sr != null) sr.sprite = data.assets.idleSprite;
+                }
             }
         }
 
@@ -242,7 +272,24 @@ namespace TDF.Runtime.Entities
                 case 7: s = dirs.downRight; break;
             }
 
-            if (s != null) sr.sprite = s;
+            if (data.assets.animatorController != null)
+            {
+                if (animator != null)
+                {
+                    animator.SetBool("IsAttacking", true);
+                    animator.SetFloat("DirX", dir.x);
+                    animator.SetFloat("DirY", dir.y);
+                    animator.SetFloat("Angle", angle);
+                }
+            }
+            else if (data.assets.attackAnim != null)
+            {
+                PlayClip(data.assets.attackAnim);
+            }
+            else // 애니메이션이 없을 때만 고정 이미지 세팅
+            {
+                if (s != null) sr.sprite = s;
+            }
         }
 
         private void FindTarget(float range)
@@ -284,10 +331,7 @@ namespace TDF.Runtime.Entities
                 if (projectile != null)
                 {
                     var tier = data.upgradeTiers[currentTierIndex];
-                    projectile.Initialize(currentTarget, tier.damage, data.attackAttribute, data.assets.hitEffectPrefab, tier.projectileSprite);
-                    
-                    // 발사체 스케일 적용
-                    projectile.transform.localScale = Vector3.one * data.assets.projectileScale;
+                    projectile.Initialize(currentTarget, tier.damage, data.attackAttribute, data.assets.hitEffectPrefab, tier.projectileSprite, tier.projectileAnim, data.assets.projectileScale);
                 }
             }
         }

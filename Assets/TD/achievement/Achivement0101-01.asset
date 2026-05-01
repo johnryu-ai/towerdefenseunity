@@ -16,7 +16,7 @@ MonoBehaviour:
   achievementName: 1-1clear
   description: 1-1 clear
   conditionType: 3
-  targetValue: 0
+  targetValue: 1
   targetStringData: Stage1-1
   rewardGold: 0
   rewardGems: 10

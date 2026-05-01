@@ -12,30 +12,49 @@ namespace TDF.Runtime.Entities
         private float damage;
         private AttackAttribute attribute;
         private GameObject hitEffectPrefab;
+        private float targetScale = 1f;
 
         private Transform cachedTransform;
+        
+        private Animator animator;
+        private float animTime = 0f;
+        private AnimationClip currentPlayingClip;
 
         private void Awake()
         {
             cachedTransform = transform;
+            animator = GetComponent<Animator>();
         }
 
-        public void Initialize(MonsterController targetMonster, float dmg, AttackAttribute attr, GameObject hitEffect, Sprite projSprite = null)
+        public void Initialize(MonsterController targetMonster, float dmg, AttackAttribute attr, GameObject hitEffect, Sprite projSprite = null, AnimationClip projAnim = null, float projScale = 1f)
         {
             target = targetMonster;
             damage = dmg;
             attribute = attr;
             hitEffectPrefab = hitEffect;
+            targetScale = projScale;
+            
+            currentPlayingClip = projAnim;
+            animTime = 0f;
 
-            if (projSprite != null)
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
             {
-                var sr = GetComponent<SpriteRenderer>();
-                if (sr != null)
-                {
+                // 애니메이션만 있을 경우를 대비해 머티리얼 강제 세팅
+                sr.material = new Material(Shader.Find("Sprites/Default"));
+                sr.color = Color.white;
+                sr.sortingOrder = 30000;
+
+                if (projSprite != null) {
                     sr.sprite = projSprite;
-                    // 타워/몬스터가 동적 정렬(1000~2000+)을 사용하므로 발사체는 이보다 무조건 높은 30000 할당
-                    sr.sortingOrder = 30000; 
+                } else if (projAnim != null) {
+                    projAnim.SampleAnimation(gameObject, 0f); // 첫 프레임 로드
                 }
+            }
+
+            if (projAnim != null)
+            {
+                if (animator == null) animator = gameObject.AddComponent<Animator>();
             }
 
             // 초기 방향 설정 (생성 직후 0도 방향으로 튀는 현상 방지)
@@ -56,6 +75,15 @@ namespace TDF.Runtime.Entities
                 return;
             }
 
+            // 애니메이션 재생
+            if (currentPlayingClip != null)
+            {
+                animTime += Time.deltaTime;
+                if (currentPlayingClip.isLooping) animTime %= currentPlayingClip.length;
+                else animTime = Mathf.Clamp(animTime, 0f, currentPlayingClip.length);
+                currentPlayingClip.SampleAnimation(gameObject, animTime);
+            }
+
             // 타겟을 향해 이동
             Vector3 dir = (target.transform.position - cachedTransform.position).normalized;
             cachedTransform.position += dir * speed * Time.deltaTime;
@@ -68,6 +96,20 @@ namespace TDF.Runtime.Entities
             if (Vector2.SqrMagnitude(cachedTransform.position - target.transform.position) < 0.1f)
             {
                 HitTarget();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && sr.sprite != null)
+            {
+                float maxBound = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y);
+                if (maxBound > 0.001f)
+                {
+                    float currentScale = targetScale / maxBound;
+                    transform.localScale = Vector3.one * currentScale;
+                }
             }
         }
 

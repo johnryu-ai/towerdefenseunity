@@ -16,8 +16,8 @@ MonoBehaviour:
   achievementName: 1-1 clear
   description: 1-1 clear
   conditionType: 3
-  targetValue: 0
-  targetStringData: stage1-2
+  targetValue: 1
+  targetStringData: Stage1-2
   rewardGold: 0
   rewardGems: 10
   achievementIcon: {fileID: 0}

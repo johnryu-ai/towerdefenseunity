@@ -21,6 +21,7 @@ namespace TDF.Core.Data
         public Sprite hitSprite;
         public Sprite dieSprite;
         public AnimationClip moveAnim;
+        public RuntimeAnimatorController animatorController; // 애니메이션 컨트롤러 추가
         public GameObject prefab;
 
         [Header("Scale")]

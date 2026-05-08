@@ -15,4 +15,5 @@ MonoBehaviour:
   pageId: main
   pageType: 1
   uiPrefab: {fileID: 3641076260475116530, guid: 207d034561c93284e8aad863293d2b9b, type: 3}
+  visualLayout: {fileID: 11400000, guid: 04222020ed8c7c94c8a1bb1640f96fcd, type: 2}
   isPopup: 0

@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdc8408a7df6cf046a45dbb43e540639, type: 3}
+  m_Name: NewLobbyMenuUIData
+  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.LobbyMenuUIData
+  backgroundImage: {fileID: 7545664159256303283, guid: aab3fbc88f28bdb4fb8002aa26403a61, type: 3}
+  topBannerImage: {fileID: 0}
+  topBannerRect:
+    serializedVersion: 2
+    x: 232.9259
+    y: 1.7316322
+    width: 1594.791
+    height: 93.515366
+  buttons:
+  - buttonName: START
+    buttonImage: {fileID: 1086331387851373080, guid: 93be5106325565a42a6f8634d5da4b7a, type: 3}
+    buttonText: START
+    buttonRect:
+      serializedVersion: 2
+      x: 850
+      y: 250
+      width: 500
+      height: 200
+    actionType: 1
+    targetPageAsset: {fileID: 0}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 50
+    fontStyle: 1
+    fontAsset: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+  - buttonName: SHOP
+    buttonImage: {fileID: -3010976479455786901, guid: 93be5106325565a42a6f8634d5da4b7a, type: 3}
+    buttonText: SHOP
+    buttonRect:
+      serializedVersion: 2
+      x: 1370
+      y: 250
+      width: 500
+      height: 200
+    actionType: 0
+    targetPageAsset: {fileID: 11400000, guid: 2c2825eb05c6daf4081f86d14dc36cb0, type: 2}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 50
+    fontStyle: 1
+    fontAsset: {fileID: 0}
+  - buttonName: ACHIVEMENT
+    buttonImage: {fileID: 8644044645828044272, guid: 93be5106325565a42a6f8634d5da4b7a, type: 3}
+    buttonText: ACHIVEMENT
+    buttonRect:
+      serializedVersion: 2
+      x: 850
+      y: 500
+      width: 500
+      height: 200
+    actionType: 0
+    targetPageAsset: {fileID: 11400000, guid: d9650c01bbaeb0944bd7dd1dcabfd17a, type: 2}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 50
+    fontStyle: 1
+    fontAsset: {fileID: 0}
+  - buttonName: LEADERBOARD
+    buttonImage: {fileID: -5658374703369891906, guid: 93be5106325565a42a6f8634d5da4b7a, type: 3}
+    buttonText: LEADERBOARD
+    buttonRect:
+      serializedVersion: 2
+      x: 1370
+      y: 500
+      width: 500
+      height: 200
+    actionType: 0
+    targetPageAsset: {fileID: 11400000, guid: 5ea6f8be78b2296439c769cfea211933, type: 2}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 50
+    fontStyle: 1
+    fontAsset: {fileID: 0}
+  - buttonName: EVENT
+    buttonImage: {fileID: 2815228836667508262, guid: 93be5106325565a42a6f8634d5da4b7a, type: 3}
+    buttonText: EVENT
+    buttonRect:
+      serializedVersion: 2
+      x: 850
+      y: 750
+      width: 500
+      height: 200
+    actionType: 0
+    targetPageAsset: {fileID: 11400000, guid: bdc5414d1b5ad194aabd791b2dd76d4c, type: 2}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 50
+    fontStyle: 1
+    fontAsset: {fileID: 0}
+  - buttonName: OPTION
+    buttonImage: {fileID: -7089492061302049945, guid: 93be5106325565a42a6f8634d5da4b7a, type: 3}
+    buttonText: OPTION
+    buttonRect:
+      serializedVersion: 2
+      x: 1370
+      y: 750
+      width: 500
+      height: 200
+    actionType: 0
+    targetPageAsset: {fileID: 11400000, guid: 2297a7cf34fac9f469b9b400d2ec37da, type: 2}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 50
+    fontStyle: 1
+    fontAsset: {fileID: 0}
+  - buttonName: STAGE
+    buttonImage: {fileID: 0}
+    buttonText: STAGE
+    buttonRect:
+      serializedVersion: 2
+      x: 165.36716
+      y: 444.7797
+      width: 557.51666
+      height: 316.9559
+    actionType: 0
+    targetPageAsset: {fileID: 11400000, guid: 3a8098f01867dd7448dca25ae80600bb, type: 2}
+    textColor: {r: 1, g: 1, b: 1, a: 1}
+    fontSize: 100
+    fontStyle: 0
+    fontAsset: {fileID: 0}

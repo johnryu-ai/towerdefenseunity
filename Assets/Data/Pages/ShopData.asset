@@ -14,5 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: shop
   pageType: 3
-  uiPrefab: {fileID: 8980991005730870110, guid: 63c4abe807784b548b0f057d0fc55e51, type: 3}
+  uiPrefab: {fileID: 0}
+  visualLayout: {fileID: 11400000, guid: 8b6e964b9b6b1794fac2316bbcf2f8cb, type: 2}
   isPopup: 0

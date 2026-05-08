@@ -102,7 +102,7 @@ namespace TDF.Runtime.Managers
                 // WaveData에 직접 설정한 경로가 있으면 우선 사용, 없으면 MapController 자동 탐색 사용
                 List<Vector2> path = (spawnInfo.customWaypoints != null && spawnInfo.customWaypoints.Count > 0) 
                     ? spawnInfo.customWaypoints 
-                    : Map.MapController.Instance.GetPath();
+                    : Map.MapController.Instance.GetPath(spawnInfo.spawnPointIndex);
 
                 if (path == null || path.Count == 0)
                 {

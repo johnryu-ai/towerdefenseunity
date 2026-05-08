@@ -21,6 +21,9 @@ namespace TDF.Runtime.Entities
         private LineRenderer currentRangeLine;
         private LineRenderer nextRangeLine;
         
+        // 지속형 유도 공격(ContinuousHoming)용 레이저 빔
+        private LineRenderer laserBeam;
+        
         private Animator animator; // 애니메이터 캐싱
         private float animTime = 0f;
         private AnimationClip currentPlayingClip;
@@ -45,9 +48,25 @@ namespace TDF.Runtime.Entities
 
         private void Awake()
         {
+            cachedTransform = transform; // 최적화
+            
             // 사거리 원 그리기용 LineRenderer 생성
             currentRangeLine = CreateRangeCircle("CurrentRange", Color.green);
             nextRangeLine = CreateRangeCircle("NextRange", Color.yellow);
+            
+            // 지속형 유도 공격용 레이저 생성
+            GameObject laserObj = new GameObject("LaserBeam");
+            laserObj.transform.SetParent(transform);
+            laserBeam = laserObj.AddComponent<LineRenderer>();
+            laserBeam.useWorldSpace = true;
+            laserBeam.startWidth = 0.1f;
+            laserBeam.endWidth = 0.1f;
+            laserBeam.material = new Material(Shader.Find("Sprites/Default"));
+            laserBeam.startColor = Color.cyan;
+            laserBeam.endColor = Color.blue;
+            laserBeam.positionCount = 2;
+            laserBeam.sortingOrder = 3000;
+            laserBeam.gameObject.SetActive(false);
         }
 
         private LineRenderer CreateRangeCircle(string name, Color color)
@@ -102,7 +121,8 @@ namespace TDF.Runtime.Entities
         {
             float x, y;
             float angle = 0f;
-            Vector3 center = transform.position;
+            // 타워의 실제 바닥(그라운드) 좌표를 기준으로 원을 그림
+            Vector3 center = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
             for (int i = 0; i < 51; i++)
             {
                 x = Mathf.Sin(Mathf.Deg2Rad * angle) * radius;
@@ -123,6 +143,8 @@ namespace TDF.Runtime.Entities
             GridX = gridX;
             GridY = gridY;
             cachedTransform = transform;
+            
+            if (laserBeam != null) laserBeam.gameObject.SetActive(false);
             
             if (data.assets != null)
             {
@@ -183,26 +205,75 @@ namespace TDF.Runtime.Entities
             // 2. 공격 쿨타임 계산 및 발사
             if (currentTarget != null)
             {
-                // 타겟이 사거리를 벗어났는지 확인
-                if (Vector2.SqrMagnitude(cachedTransform.position - currentTarget.transform.position) > currentTier.range * currentTier.range)
+                // 타겟이 이미 죽었거나 비활성화되었으면 타겟 초기화
+                if (!currentTarget.gameObject.activeInHierarchy)
                 {
                     currentTarget = null;
                     RevertToIdle();
+                    if (laserBeam != null) laserBeam.gameObject.SetActive(false);
                     return;
                 }
 
-                UpdateAttackSprite(currentTarget.transform.position);
+                // 타겟이 사거리를 벗어났는지 확인 (바닥 좌표 기준)
+                Vector3 monsterGroundPos = currentTarget.transform.position;
+                if (currentTarget.GetFlyType() == MonsterFlyType.Air) monsterGroundPos -= Vector3.up;
 
-                attackTimer -= Time.deltaTime;
-                if (attackTimer <= 0f)
+                Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+
+                if (Vector2.SqrMagnitude(towerGroundPos - monsterGroundPos) > currentTier.range * currentTier.range)
                 {
-                    FireProjectile();
-                    // attackSpeed가 1초당 공격 횟수라면 쿨타임은 1 / attackSpeed
-                    attackTimer = 1f / Mathf.Max(0.1f, currentTier.attackSpeed);
+                    currentTarget = null;
+                    RevertToIdle();
+                    if (laserBeam != null) laserBeam.gameObject.SetActive(false);
+                    return;
+                }
+
+                UpdateAttackSprite(monsterGroundPos);
+
+                // 지속형 유도 공격(ContinuousHoming)의 경우 빔을 그리고 데미지를 즉시 입힘
+                if (data.attackType == AttackType.ContinuousHoming)
+                {
+                    if (laserBeam != null)
+                    {
+                        laserBeam.gameObject.SetActive(true);
+                        // 타워 중심 (포신 정도의 위치: 바닥에서 visualScale 만큼 올라온 지점 등)
+                        laserBeam.SetPosition(0, towerGroundPos + Vector3.up * 0.5f);
+                        // 타겟 중심
+                        laserBeam.SetPosition(1, currentTarget.transform.position);
+                    }
+
+                    attackTimer -= Time.deltaTime;
+                    if (attackTimer <= 0f)
+                    {
+                        // 투사체 생성 없이 즉시 데미지
+                        currentTarget.TakeDamage(currentTier.damage);
+                        
+                        // 이펙트 스폰
+                        if (data.assets.hitEffectPrefab != null)
+                        {
+                            ObjectPoolManager.Instance.SpawnFromPool(data.assets.hitEffectPrefab, currentTarget.transform.position, Quaternion.identity);
+                        }
+
+                        // 공격 속도에 따른 타격 주기
+                        attackTimer = 1f / Mathf.Max(0.1f, currentTier.attackSpeed);
+                    }
+                    return; // 지속 공격은 여기서 종료 (일반 FireProjectile 미호출)
+                }
+                else
+                {
+                    if (laserBeam != null && laserBeam.gameObject.activeSelf) laserBeam.gameObject.SetActive(false);
+
+                    attackTimer -= Time.deltaTime;
+                    if (attackTimer <= 0f)
+                    {
+                        FireProjectile();
+                        attackTimer = 1f / Mathf.Max(0.1f, currentTier.attackSpeed);
+                    }
                 }
             }
             else
             {
+                if (laserBeam != null) laserBeam.gameObject.SetActive(false);
                 RevertToIdle();
             }
         }
@@ -303,7 +374,24 @@ namespace TDF.Runtime.Entities
                 var monster = MonsterController.ActiveMonsters[i];
                 if (monster != null && monster.gameObject.activeInHierarchy)
                 {
-                    float dist = Vector2.SqrMagnitude(cachedTransform.position - monster.transform.position);
+                    // 타겟팅 타입 검사
+                    bool canAttack = false;
+                    var flyType = monster.GetFlyType();
+                    if (data.targetType == TargetType.Both || data.targetType == TargetType.Special) canAttack = true;
+                    else if (data.targetType == TargetType.Ground && flyType == MonsterFlyType.Ground) canAttack = true;
+                    else if (data.targetType == TargetType.Flying && flyType == MonsterFlyType.Air) canAttack = true;
+
+                    if (!canAttack) continue;
+
+                    // 사거리 계산은 몬스터의 "지상(그림자)" 위치 기준 (공중 유닛은 이미지보다 1칸 아래)
+                    Vector3 monsterGroundPos = monster.transform.position;
+                    if (flyType == MonsterFlyType.Air)
+                    {
+                        monsterGroundPos -= Vector3.up;
+                    }
+
+                    Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+                    float dist = Vector2.SqrMagnitude(towerGroundPos - monsterGroundPos);
                     if (dist <= sqrRange && dist < closestDistance)
                     {
                         closestDistance = dist;
@@ -317,11 +405,26 @@ namespace TDF.Runtime.Entities
 
         private void FireProjectile()
         {
-            if (data.assets == null || data.assets.projectilePrefab == null || currentTarget == null) return;
+            if (data.assets == null || currentTarget == null) return;
+
+            var tier = data.upgradeTiers[currentTierIndex];
+            Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+            
+            // AreaSelf 타입은 발사체 프리팹이 없어도 즉시 데미지를 가해야 함
+            if (data.attackType == AttackType.AreaSelf && data.assets.projectilePrefab == null)
+            {
+                ExplodeAreaSelf(towerGroundPos, tier.range, tier.damage);
+                return;
+            }
+
+            if (data.assets.projectilePrefab == null) return;
+
+            // AreaSelf 타입은 발사체를 타워의 바닥 정중앙에서 생성
+            Vector3 spawnPos = (data.attackType == AttackType.AreaSelf) ? towerGroundPos : cachedTransform.position;
 
             GameObject projObj = ObjectPoolManager.Instance.SpawnFromPool(
                 data.assets.projectilePrefab,
-                cachedTransform.position,
+                spawnPos,
                 Quaternion.identity
             );
 
@@ -330,10 +433,43 @@ namespace TDF.Runtime.Entities
                 var projectile = projObj.GetComponent<ProjectileController>();
                 if (projectile != null)
                 {
-                    var tier = data.upgradeTiers[currentTierIndex];
-                    projectile.Initialize(currentTarget, tier.damage, data.attackAttribute, data.assets.hitEffectPrefab, tier.projectileSprite, tier.projectileAnim, data.assets.projectileScale);
+                    projectile.Initialize(data.attackType, data.targetType, tier.range, towerGroundPos, currentTarget, tier.damage, data.attackAttribute, data.assets.hitEffectPrefab, tier.projectileSprite, tier.projectileAnim, data.assets.projectileScale);
                 }
             }
+        }
+
+        private void ExplodeAreaSelf(Vector3 center, float range, float damage)
+        {
+            float sqrRange = range * range;
+            // 리스트 요소가 제거될 수 있으므로 역순 순회
+            for (int i = MonsterController.ActiveMonsters.Count - 1; i >= 0; i--)
+            {
+                var monster = MonsterController.ActiveMonsters[i];
+                if (monster != null && monster.gameObject.activeInHierarchy)
+                {
+                    if (!IsValidTargetType(monster.GetFlyType())) continue;
+
+                    Vector3 monsterGroundPos = monster.transform.position;
+                    if (monster.GetFlyType() == MonsterFlyType.Air) monsterGroundPos -= Vector3.up;
+
+                    if (Vector2.SqrMagnitude(center - monsterGroundPos) <= sqrRange)
+                    {
+                        monster.TakeDamage(damage);
+                        if (data.assets.hitEffectPrefab != null)
+                        {
+                            ObjectPoolManager.Instance.SpawnFromPool(data.assets.hitEffectPrefab, monster.transform.position, Quaternion.identity);
+                        }
+                    }
+                }
+            }
+        }
+
+        private bool IsValidTargetType(MonsterFlyType flyType)
+        {
+            if (data.targetType == TargetType.Both || data.targetType == TargetType.Special) return true;
+            if (data.targetType == TargetType.Ground && flyType == MonsterFlyType.Ground) return true;
+            if (data.targetType == TargetType.Flying && flyType == MonsterFlyType.Air) return true;
+            return false;
         }
 
         public bool UpgradeTower()

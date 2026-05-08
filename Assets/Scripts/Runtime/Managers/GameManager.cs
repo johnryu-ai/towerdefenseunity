@@ -28,13 +28,13 @@ namespace TDF.Runtime.Managers
 
         [Header("Scene Names")]
         [Tooltip("메인메뉴(로비) 씬 이름. Build Settings에 등록된 씬 이름과 일치해야 합니다.")]
-        public string mainMenuSceneName = "Lobby_Main";
+        public string mainMenuSceneName = "Main";
 
         [Header("Achievements")]
         public List<AchievementData> allAchievements = new List<AchievementData>();
 
         public static CampaignData staticTestCampaign;
-        public static int staticTestStageIndex = 0;
+        public static int staticTestStageIndex = -1;
         
         public float stageStartTime { get; private set; }
         public float stageClearTime { get; private set; }
@@ -46,10 +46,13 @@ namespace TDF.Runtime.Managers
                 Instance = this;
                 
                 // 테스터에서 넘겨준 static 데이터가 있으면 우선 적용
+                if (staticTestStageIndex >= 0)
+                {
+                    currentStageIndex = staticTestStageIndex;
+                }
                 if (staticTestCampaign != null)
                 {
                     currentCampaign = staticTestCampaign;
-                    currentStageIndex = staticTestStageIndex;
                 }
                 
                 // 싱글톤 유지가 필요한 경우 아래 주석 해제 (단일 씬 구조라면 불필요)
@@ -80,9 +83,15 @@ namespace TDF.Runtime.Managers
 
         public void InitializeGame()
         {
-            if (currentCampaign != null && currentCampaign.stages != null && currentStageIndex < currentCampaign.stages.Count)
+            if (currentCampaign != null && currentCampaign.stages != null && currentCampaign.stages.Count > 0)
             {
+                if (currentStageIndex >= currentCampaign.stages.Count) 
+                    currentStageIndex = currentCampaign.stages.Count - 1;
+                else if (currentStageIndex < 0)
+                    currentStageIndex = 0;
+
                 currentStageData = currentCampaign.stages[currentStageIndex];
+                Debug.Log($"[GameManager] Initializing Game! Campaign: {currentCampaign.name}, Stage Index: {currentStageIndex}, Stage Name: {currentStageData.name}");
                 
                 // WaveManager에도 해당 스테이지 데이터 전달 (현재는 인스펙터 참조 방식이 혼용되어 있으므로 강제 할당)
                 if (WaveManager.Instance != null)
@@ -177,7 +186,7 @@ namespace TDF.Runtime.Managers
         {
             // 정적 캠페인 진행 상태 초기화
             staticTestCampaign = null;
-            staticTestStageIndex = 0;
+            staticTestStageIndex = -1;
 
             // timeScale 복구 (Victory/Paused 상태에서 0이 될 수 있음)
             Time.timeScale = 1f;

@@ -66,7 +66,8 @@ namespace TDF.Editor.Modules
                     
                     data.pageId = EditorGUILayout.TextField("Page ID", data.pageId);
                     data.pageType = (PageType)EditorGUILayout.EnumPopup("Page Type", data.pageType);
-                    data.uiPrefab = (GameObject)EditorGUILayout.ObjectField("UI Prefab", data.uiPrefab, typeof(GameObject), false);
+                    data.visualLayout = (LobbyMenuUIData)EditorGUILayout.ObjectField("Visual Layout Data", data.visualLayout, typeof(LobbyMenuUIData), false);
+                    data.uiPrefab = (GameObject)EditorGUILayout.ObjectField("UI Prefab (Fallback)", data.uiPrefab, typeof(GameObject), false);
                     data.isPopup = EditorGUILayout.Toggle("Is Popup", data.isPopup);
 
                     if (EditorGUI.EndChangeCheck())

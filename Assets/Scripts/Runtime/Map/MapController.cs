@@ -93,13 +93,13 @@ namespace TDF.Runtime.Map
 
             // 중심을 맞추기 위한 오프셋 계산 (화면 중앙에 맵 배치)
             offsetX = -mapData.gridWidth * TILE_SIZE / 2f + (TILE_SIZE / 2f);
-            offsetY = mapData.gridHeight * TILE_SIZE / 2f - (TILE_SIZE / 2f);
+            offsetY = -mapData.gridHeight * TILE_SIZE / 2f + (TILE_SIZE / 2f); // Bottom-Left
 
             for (int y = 0; y < mapData.gridHeight; y++)
             {
                 for (int x = 0; x < mapData.gridWidth; x++)
                 {
-                    Vector3 position = new Vector3(offsetX + (x * TILE_SIZE), offsetY - (y * TILE_SIZE), 0);
+                    Vector3 position = new Vector3(offsetX + (x * TILE_SIZE), offsetY + (y * TILE_SIZE), 0);
                     GameObject tileObj = Instantiate(tilePrefab, position, Quaternion.identity, tileContainer);
                     tileObj.SetActive(true);
                     tileObj.name = $"Tile_{x}_{y}";
@@ -160,7 +160,7 @@ namespace TDF.Runtime.Map
             }
         }
 
-        public List<Vector2> GetPath()
+        public List<Vector2> GetPath(int spawnPointIndex = -1)
         {
             List<Vector2> path = new List<Vector2>();
             if (currentMapData == null) return path;
@@ -171,12 +171,61 @@ namespace TDF.Runtime.Map
             int spawnX = -1, spawnY = -1;
             int baseX = -1, baseY = -1;
 
+            // 1. 수동 지정된 스폰 포인트 확인
+            if (spawnPointIndex >= 0 && spawnPointIndex < currentMapData.spawnPoints.Count)
+            {
+                var sp = currentMapData.spawnPoints[spawnPointIndex];
+                
+                // 스폰 포인트에 수동 지정된 경로가 있다면 우선 사용 (주로 길 없는 공중 유닛용)
+                if (sp.pathWaypoints != null && sp.pathWaypoints.Count > 0)
+                {
+                    bool isInvalidPath = false;
+                    List<Vector2> worldPath = new List<Vector2>();
+                    for (int i = 0; i < sp.pathWaypoints.Count; i++)
+                    {
+                        Vector2 blCoord = sp.pathWaypoints[i];
+                        int gx = Mathf.RoundToInt(blCoord.x);
+                        int gy = Mathf.RoundToInt(blCoord.y);
+                        
+                        // 오래된 월드 좌표 데이터이거나 범위를 벗어난 경우 무시
+                        if (gx < 0 || gx >= currentMapData.gridWidth || gy < 0 || gy >= currentMapData.gridHeight)
+                        {
+                            isInvalidPath = true;
+                            break;
+                        }
+                        
+                        worldPath.Add(GetWorldPosition(gx, gy));
+                    }
+                    
+                    if (!isInvalidPath)
+                    {
+                        return worldPath;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"SpawnPoint {spawnPointIndex} has invalid or old manual path data. Ignoring it and using BFS.");
+                    }
+                }
+
+                // 지상 유닛 자동 길찾기를 위한 좌표
+                int tempX = sp.coordinate.x;
+                int tempY = sp.coordinate.y;
+                
+                // 만약 사용자가 에디터에서 Sync를 안 눌러서 좌표가 엉뚱한 곳을 가리킨다면, 무시하고 아래에서 동적으로 찾음
+                if (currentMapData.GetTileAt(tempX, tempY) == TileType.Spawn)
+                {
+                    spawnX = tempX;
+                    spawnY = tempY;
+                }
+            }
+
+            // 2. Base 위치 찾기 및 Spawn 위치 (지정 안된 경우 첫번째) 찾기
             for (int y = 0; y < gridH; y++)
             {
                 for (int x = 0; x < gridW; x++)
                 {
                     TileType t = currentMapData.GetTileAt(x, y);
-                    if (t == TileType.Spawn) { spawnX = x; spawnY = y; }
+                    if (t == TileType.Spawn && spawnX == -1) { spawnX = x; spawnY = y; }
                     else if (t == TileType.Base) { baseX = x; baseY = y; }
                 }
             }
@@ -236,7 +285,13 @@ namespace TDF.Runtime.Map
                 }
             }
 
-            if (currentDir == Vector2Int.zero) return path; // 길 없음
+            if (currentDir == Vector2Int.zero) 
+            {
+                // 길이 끊겨있거나 찾을 수 없는 경우 (주로 공중 유닛 스폰 포인트)
+                // 즉사하지 않도록 강제로 기지(Base)를 목적지로 추가하여 직선으로 날아가게 합니다.
+                path.Add(GetWorldPosition(baseX, baseY));
+                return path;
+            }
 
             int safeguard = 0;
             while (currentPos.x != baseX || currentPos.y != baseY)

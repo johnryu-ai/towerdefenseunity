@@ -88,7 +88,7 @@ namespace TDF.Runtime.Managers
             if (Map.MapController.Instance != null && GameManager.Instance.currentMapData != null)
             {
                 int x = Mathf.RoundToInt((worldPos.x - Map.MapController.Instance.offsetX) / Map.MapController.TILE_SIZE);
-                int y = Mathf.RoundToInt(-(worldPos.y - Map.MapController.Instance.offsetY) / Map.MapController.TILE_SIZE);
+                int y = Mathf.RoundToInt((worldPos.y - Map.MapController.Instance.offsetY) / Map.MapController.TILE_SIZE);
                 
                 if (x >= 0 && x < GameManager.Instance.currentMapData.gridWidth && 
                     y >= 0 && y < GameManager.Instance.currentMapData.gridHeight)

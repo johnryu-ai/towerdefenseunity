@@ -15,4 +15,5 @@ MonoBehaviour:
   pageId: login
   pageType: 0
   uiPrefab: {fileID: 1643441916474430566, guid: 7db63a02c73ed844b8cdf23503de67a8, type: 3}
+  visualLayout: {fileID: 11400000, guid: c4a9b7c2dab04e3468a228c8310efdc2, type: 2}
   isPopup: 0

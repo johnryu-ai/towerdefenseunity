@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace TDF.Core.Data
 {
     public enum AttackAttribute { Normal, Fire, Cold, Electric, Buff, Resource }
-    public enum AttackType { Single, LinePiercing, AreaSelf, AreaProjectile }
+    public enum AttackType { Single, LinePiercing, AreaSelf, AreaProjectile, ContinuousHoming, Multi }
     public enum TargetType { Ground, Flying, Both, Special }
 
     [System.Serializable]

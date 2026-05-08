@@ -9,10 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b558421e0f27aa4299869162d0497bd, type: 3}
-  m_Name: NewPageData 3
-  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
-  pageId: shop
-  pageType: 3
-  uiPrefab: {fileID: 0}
-  isPopup: 0
+  m_Script: {fileID: 11500000, guid: 8d1b84e10cd5d4b408e4c83bfc4ecafd, type: 3}
+  m_Name: Stage1-4
+  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.StageData
+  stageIndex: 0
+  linkedMapData: {fileID: 0}
+  entryStory: []
+  clearStory: []
+  waveData: {fileID: 0}

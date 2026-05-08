@@ -80,10 +80,12 @@ namespace TDF.Editor.Modules
         {
             GUILayout.Label("Movement Properties", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
-            var newMovement = (MonsterMovementType)EditorGUILayout.EnumPopup("Movement Type", targetMonster.movementType);
+            var newFlyType = (MonsterFlyType)EditorGUILayout.EnumPopup("Fly Type (Ground/Air)", targetMonster.flyType);
+            var newMovement = (MonsterMovementType)EditorGUILayout.EnumPopup("Movement Path Type", targetMonster.movementType);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(targetMonster, "Edit Monster Movement");
+                targetMonster.flyType = newFlyType;
                 targetMonster.movementType = newMovement;
             }
         }

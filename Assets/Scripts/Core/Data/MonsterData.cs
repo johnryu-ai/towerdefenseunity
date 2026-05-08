@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace TDF.Core.Data
 {
+    public enum MonsterFlyType { Ground, Air }
     public enum MonsterMovementType { GroundPath, FlyingStraight, FlyingCurve }
 
     [System.Serializable]
@@ -47,6 +48,7 @@ namespace TDF.Core.Data
         public MonsterStats stats;
         
         [Header("Movement")]
+        public MonsterFlyType flyType = MonsterFlyType.Ground;
         public MonsterMovementType movementType = MonsterMovementType.GroundPath;
 
         [Header("Special")]

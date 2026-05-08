@@ -15,4 +15,5 @@ MonoBehaviour:
   pageId: achievement
   pageType: 7
   uiPrefab: {fileID: 8564033181370545974, guid: ed83d32a62c6a154c891f2d0da46fe83, type: 3}
+  visualLayout: {fileID: 11400000, guid: c2e12192f0add264b865f462f7a3279a, type: 2}
   isPopup: 0

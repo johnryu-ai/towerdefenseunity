@@ -56,12 +56,18 @@ namespace TDF.Runtime.UI
             if (allStages == null)
             {
                 string[] guids = UnityEditor.AssetDatabase.FindAssets("t:CampaignData");
-                if (guids.Length > 0)
+                foreach (string guid in guids)
                 {
-                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-                    allStages = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignData>(path);
-                    Debug.Log($"[LobbyUIManager] allStages가 비어 있어 자동으로 {allStages.name} 할당 완료!");
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    CampaignData camp = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignData>(path);
+                    if (camp != null && camp.stages != null && camp.stages.Count > 0)
+                    {
+                        allStages = camp;
+                        break;
+                    }
                 }
+                if (allStages != null)
+                    Debug.Log($"[LobbyUIManager] allStages가 비어 있어 자동으로 {allStages.name} 할당 완료!");
             }
 
             if (shopItems == null || shopItems.Count == 0)
@@ -98,7 +104,7 @@ namespace TDF.Runtime.UI
             else if (sceneName == "Lobby_Achievement") currentScreen = LobbyScreen.Achievement;
             else if (sceneName == "Lobby_Leaderboard") currentScreen = LobbyScreen.Leaderboard;
             else if (sceneName == "Lobby_Event") currentScreen = LobbyScreen.Event;
-            else if (sceneName == "Lobby_Main" || sceneName == "Lobby") currentScreen = LobbyScreen.Main;
+            else if (sceneName == "Main" || sceneName == "Lobby") currentScreen = LobbyScreen.Main;
             // StageDetail은 StageGroups에서 내부 상태로 전환됨
         }
 
@@ -165,7 +171,7 @@ namespace TDF.Runtime.UI
             if (c) 
             {
                 // 씬 이동으로 메인 복귀
-                SceneManager.LoadScene("Lobby_Main");
+                SceneManager.LoadScene("Main");
             }
             return c;
         }
@@ -215,10 +221,10 @@ namespace TDF.Runtime.UI
                 return;
             }
 
-            string targetScene = "Lobby_Main";
+            string targetScene = "Main";
             switch(s)
             {
-                case LobbyScreen.Main: targetScene = "Lobby_Main"; break;
+                case LobbyScreen.Main: targetScene = "Main"; break;
                 case LobbyScreen.StageGroups: targetScene = "Lobby_Stage"; break;
                 case LobbyScreen.Shop: targetScene = "Lobby_Shop"; break;
                 case LobbyScreen.Achievement: targetScene = "Lobby_Achievement"; break;

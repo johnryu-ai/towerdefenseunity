@@ -115,7 +115,7 @@ namespace TDF.Editor
         [MenuItem("Tools/TDF/Split Lobby Into Separate Scenes")]
         public static void SplitLobbyIntoScenes()
         {
-            string[] newSceneNames = { "Lobby_Main", "Lobby_Stage", "Lobby_Shop", "Lobby_Achievement", "Lobby_Leaderboard", "Lobby_Event" };
+            string[] newSceneNames = { "Main", "Lobby_Stage", "Lobby_Shop", "Lobby_Achievement", "Lobby_Leaderboard", "Lobby_Event" };
             string sceneDir = "Assets/Scenes";
             
             // 현재 활성화된 씬 저장
@@ -159,7 +159,164 @@ namespace TDF.Editor
             Debug.Log("로비 하위 메뉴들이 개별 씬으로 성공적으로 분리 및 Build Settings에 등록되었습니다!");
             
             // 메인 로비 씬 열기
-            UnityEditor.SceneManagement.EditorSceneManager.OpenScene($"{sceneDir}/Lobby_Main.unity");
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene($"{sceneDir}/Main.unity");
+        }
+
+        [MenuItem("Tools/TDF/Apply Lobby UI Data to Current Scene")]
+        public static void ApplyLobbyUIData()
+        {
+            // 1. Canvas 확인
+            Canvas canvas = GameObject.FindAnyObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogError("현재 씬에 Canvas가 없습니다. Tools/TDF/Setup Lobby Scene (Current) 를 먼저 실행해주세요.");
+                return;
+            }
+
+            // 2. LobbyUI_Root 찾기 또는 생성
+            Transform rootTransform = canvas.transform.Find("LobbyUI_Root");
+            GameObject rootObj;
+            if (rootTransform == null)
+            {
+                rootObj = new GameObject("LobbyUI_Root", typeof(RectTransform));
+                rootObj.transform.SetParent(canvas.transform, false);
+                
+                RectTransform rt = rootObj.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                rootObj = rootTransform.gameObject;
+            }
+
+            // 3. LobbyUIBinder 확인 및 추가
+            TDF.Runtime.UI.LobbyUIBinder binder = rootObj.GetComponent<TDF.Runtime.UI.LobbyUIBinder>();
+            if (binder == null)
+            {
+                binder = rootObj.AddComponent<TDF.Runtime.UI.LobbyUIBinder>();
+            }
+
+            // 4. LobbyMenuUIData 찾아서 할당
+            if (binder.uiData == null)
+            {
+                string[] guids = AssetDatabase.FindAssets("t:LobbyMenuUIData");
+                if (guids.Length > 0)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                    binder.uiData = AssetDatabase.LoadAssetAtPath<LobbyMenuUIData>(path);
+                    Debug.Log($"LobbyMenuUIData 자동 할당됨: {path}");
+                }
+                else
+                {
+                    Debug.LogWarning("프로젝트에 LobbyMenuUIData 파일이 없습니다. Lobby UI Editor에서 먼저 생성해주세요.");
+                }
+            }
+
+            binder.uiRoot = rootObj.GetComponent<RectTransform>();
+
+            // 저장 및 갱신
+            EditorUtility.SetDirty(binder);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+            Debug.Log("Lobby UI Binder가 성공적으로 세팅되었습니다. 플레이(Play)를 누르면 UI가 자동 생성됩니다.");
+        }
+
+        [MenuItem("Tools/TDF/Create New Main Scene")]
+        public static void CreateNewMainScene()
+        {
+            string scenePath = "Assets/Scenes/Main.unity";
+            
+            // 기존 씬 저장
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+            
+            // 새 씬 생성
+            var newScene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+            
+            // 1. 카메라 세팅
+            GameObject camObj = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
+            camObj.tag = "MainCamera";
+            camObj.transform.position = new Vector3(0, 0, -10);
+            Camera cam = camObj.GetComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.05f, 0.05f, 0.1f);
+
+            // 2. Canvas 세팅
+            GameObject cvObj = new GameObject("LobbyCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            Canvas canvas = cvObj.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            CanvasScaler cs = cvObj.GetComponent<CanvasScaler>();
+            cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(1920, 1080);
+
+            // 3. EventSystem 세팅
+            GameObject esObj = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem));
+            esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+
+            // 4. LobbyManager 및 UserDataManager 세팅
+            GameObject mgrObj = new GameObject("Managers");
+            
+            LobbyManager lm = mgrObj.AddComponent<LobbyManager>();
+            lm.uiRoot = canvas.transform;
+
+            if (mgrObj.GetComponent<UserDataManager>() == null)
+            {
+                mgrObj.AddComponent<UserDataManager>();
+            }
+
+            string[] pageGuids = AssetDatabase.FindAssets("t:PageData");
+            lm.allPages = new List<PageData>();
+            foreach (string guid in pageGuids)
+            {
+                string p = AssetDatabase.GUIDToAssetPath(guid);
+                PageData data = AssetDatabase.LoadAssetAtPath<PageData>(p);
+                if (data != null) lm.allPages.Add(data);
+            }
+
+            // 5. LobbyUIBinder 세팅 (여기에 새 UI 연동)
+            GameObject rootObj = new GameObject("LobbyUI_Root", typeof(RectTransform));
+            rootObj.transform.SetParent(canvas.transform, false);
+            RectTransform rt = rootObj.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            TDF.Runtime.UI.LobbyUIBinder binder = rootObj.AddComponent<TDF.Runtime.UI.LobbyUIBinder>();
+            binder.uiRoot = rt;
+
+            string[] uiDataGuids = AssetDatabase.FindAssets("t:LobbyMenuUIData");
+            if (uiDataGuids.Length > 0)
+            {
+                binder.uiData = AssetDatabase.LoadAssetAtPath<LobbyMenuUIData>(AssetDatabase.GUIDToAssetPath(uiDataGuids[0]));
+            }
+            else
+            {
+                Debug.LogWarning("LobbyMenuUIData가 없습니다. Lobby UI Editor에서 먼저 생성해주세요.");
+            }
+
+            // 씬 저장
+            if (!System.IO.Directory.Exists("Assets/Scenes"))
+            {
+                System.IO.Directory.CreateDirectory("Assets/Scenes");
+            }
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(newScene, scenePath);
+
+            // Build Settings에 등록
+            List<EditorBuildSettingsScene> buildScenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            bool exists = false;
+            foreach (var s in buildScenes)
+            {
+                if (s.path == scenePath) exists = true;
+            }
+            if (!exists)
+            {
+                buildScenes.Insert(0, new EditorBuildSettingsScene(scenePath, true)); // 메인 씬이므로 맨 앞에
+                EditorBuildSettings.scenes = buildScenes.ToArray();
+            }
+
+            Debug.Log($"새로운 로비 씬 '{scenePath}'이(가) 완벽하게 구성되었습니다!");
         }
     }
 }

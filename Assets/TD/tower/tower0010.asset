@@ -25,7 +25,8 @@ MonoBehaviour:
     attackSpeed: 1
     sellPrice: 80
     manaCost: 0
-    projectileSprite: {fileID: 21300000, guid: a11a4e665928f5648bcf27cf9c31458d, type: 3}
+    projectileSprite: {fileID: 1797201128194229901, guid: c729125eac6875e4e813dd8321ea969d, type: 3}
+    projectileAnim: {fileID: 0}
   - tierLevel: 1
     buildOrUpgradeCost: 100
     range: 2
@@ -33,7 +34,8 @@ MonoBehaviour:
     attackSpeed: 2
     sellPrice: 160
     manaCost: 0
-    projectileSprite: {fileID: 8982129810597719157, guid: 35e41504c84ecd54da4c4787b5c58ddf, type: 3}
+    projectileSprite: {fileID: 0}
+    projectileAnim: {fileID: 7400000, guid: c510a206b20ace242b5321130662c6dd, type: 2}
   - tierLevel: 2
     buildOrUpgradeCost: 120
     range: 2.5
@@ -42,6 +44,7 @@ MonoBehaviour:
     sellPrice: 256
     manaCost: 0
     projectileSprite: {fileID: 0}
+    projectileAnim: {fileID: 0}
   assets:
     idleSprite: {fileID: -8502096955618109978, guid: cfca65820e4f7d842af1376f36a96280, type: 3}
     attackSprite: {fileID: -8502096955618109978, guid: cfca65820e4f7d842af1376f36a96280, type: 3}
@@ -56,6 +59,7 @@ MonoBehaviour:
       downRight: {fileID: 5602938150852079413, guid: ad1d993f8409a1e419a86762a022a6cf, type: 3}
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
+    animatorController: {fileID: 0}
     prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
     projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
     hitEffectPrefab: {fileID: 0}

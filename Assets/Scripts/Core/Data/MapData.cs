@@ -24,6 +24,7 @@ namespace TDF.Core.Data
     [System.Serializable]
     public class SpawnPointData
     {
+        public string spawnId = "Spawn_0";
         public int spawnIndex;
         public Vector2Int coordinate;
         public List<Vector2> pathWaypoints = new List<Vector2>();

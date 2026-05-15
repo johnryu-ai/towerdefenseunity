@@ -30,8 +30,11 @@ namespace TDF.Runtime.Managers
             if (Instance == null)
             {
                 Instance = this;
+                transform.SetParent(null);
                 DontDestroyOnLoad(gameObject);
-                Load();
+                
+                // BackendManager의 로그인 성공 이벤트를 기다렸다가 클라우드에서 데이터를 불러옵니다.
+                // (로컬 파일 로딩은 이전 유저 데이터 충돌을 막기 위해 제외합니다.)
             }
             else
             {
@@ -39,19 +42,50 @@ namespace TDF.Runtime.Managers
             }
         }
 
+        private void Start()
+        {
+            if (BackendManager.Instance != null)
+            {
+                BackendManager.Instance.OnSignInSuccess += LoadFromCloud;
+                BackendManager.Instance.OnSignOut += ResetAllData;
+                
+                // 만약 이미 로그인되어 있다면 즉시 로드
+                if (BackendManager.Instance.IsSignedIn)
+                {
+                    LoadFromCloud();
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (BackendManager.Instance != null)
+            {
+                BackendManager.Instance.OnSignInSuccess -= LoadFromCloud;
+                BackendManager.Instance.OnSignOut -= ResetAllData;
+            }
+        }
+
         // ══════════════════════════════════════════════════════════════════
         // 파일 IO
         // ══════════════════════════════════════════════════════════════════
 
-        /// <summary>현재 saveData를 JSON 파일로 즉시 저장한다.</summary>
-        public void Save()
+        /// <summary>현재 saveData를 클라우드에 저장한다 (로컬 백업 병행).</summary>
+        public async void Save()
         {
             try
             {
                 saveData.lastSavedAt = DateTime.Now.ToString("o");
                 string json = JsonUtility.ToJson(saveData, prettyPrint: true);
                 File.WriteAllText(SaveFilePath, json);
-                Debug.Log($"[UserDataManager] 저장 완료 → {SaveFilePath}");
+
+                // 클라우드 세이브 연동
+                if (BackendManager.Instance != null && BackendManager.Instance.IsSignedIn)
+                {
+                    var data = new Dictionary<string, object> { { "UserSaveData", json } };
+                    await Unity.Services.CloudSave.CloudSaveService.Instance.Data.Player.SaveAsync(data);
+                    Debug.Log("[UserDataManager] 클라우드 저장 완료");
+                }
             }
             catch (Exception e)
             {
@@ -59,28 +93,40 @@ namespace TDF.Runtime.Managers
             }
         }
 
-        /// <summary>JSON 파일에서 saveData를 불러온다. 파일이 없으면 새 데이터를 생성한다.</summary>
-        public void Load()
+        /// <summary>서버에서 데이터를 불러온다. 신규 유저의 경우 초기값으로 세팅된다.</summary>
+        public async void LoadFromCloud()
         {
             try
             {
-                if (File.Exists(SaveFilePath))
+                if (BackendManager.Instance != null && BackendManager.Instance.IsSignedIn)
                 {
-                    string json = File.ReadAllText(SaveFilePath);
-                    saveData = JsonUtility.FromJson<UserSaveData>(json);
-                    if (saveData == null) saveData = new UserSaveData();
-                    Debug.Log($"[UserDataManager] 로드 완료 → {SaveFilePath}");
+                    Debug.Log("[UserDataManager] 서버에서 진행 데이터를 불러옵니다...");
+                    var keys = new HashSet<string> { "UserSaveData" };
+                    var loadedData = await Unity.Services.CloudSave.CloudSaveService.Instance.Data.Player.LoadAsync(keys);
+
+                    if (loadedData.TryGetValue("UserSaveData", out var cloudJson))
+                    {
+                        saveData = JsonUtility.FromJson<UserSaveData>(cloudJson.Value.GetAsString());
+                        Debug.Log("[UserDataManager] 기존 유저 데이터 로드 완료.");
+                    }
+                    else
+                    {
+                        // 클라우드에 데이터가 전혀 없는 신규 유저
+                        saveData = new UserSaveData();
+                        Debug.Log("[UserDataManager] 신규 유저입니다. 데이터를 초기화합니다.");
+                        Save(); // 신규 초기 데이터를 즉시 서버에 저장
+                    }
                 }
                 else
                 {
+                    Debug.LogWarning("[UserDataManager] 로그인되어 있지 않아 데이터를 불러올 수 없습니다.");
                     saveData = new UserSaveData();
-                    Debug.Log("[UserDataManager] 저장 파일 없음. 새 데이터로 시작합니다.");
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError($"[UserDataManager] 로드 실패: {e.Message}");
-                saveData = new UserSaveData();
+                if (saveData == null) saveData = new UserSaveData();
             }
         }
 
@@ -333,35 +379,45 @@ namespace TDF.Runtime.Managers
             => saveData.achievementProgresses.FindAll(a => a.completed && !a.rewardClaimed);
 
         // ══════════════════════════════════════════════════════════════════
-        // 재화 (골드 / 크리스탈)
+        // 재화 (크리스탈) - EconomyManager 연동 (골드는 인게임 전용으로 제외됨)
         // ══════════════════════════════════════════════════════════════════
 
-        public int PlayerGold => saveData.playerGold;
-        public int PlayerGems => saveData.playerGems;
+        public int PlayerGems => EconomyManager.Instance != null ? (int)EconomyManager.Instance.CurrentGems : saveData.playerGems;
 
-        /// <summary>골드·크리스탈을 지급한다 (음수 전달 금지).</summary>
-        public void AddCurrency(int gold = 0, int gems = 0)
+        /// <summary>크리스탈을 지급한다 (서버 연동). 골드 파라미터는 하위 호환성을 위해 유지되나 무시됨.</summary>
+        public async void AddCurrency(int gold = 0, int gems = 0)
         {
-            saveData.playerGold += gold;
-            saveData.playerGems += gems;
-            Save();
+            if (EconomyManager.Instance != null)
+            {
+                if (gems > 0) await EconomyManager.Instance.AddCurrencyAsync(EconomyManager.CURRENCY_GEMS_ID, gems);
+            }
+            else
+            {
+                saveData.playerGems += gems;
+                Save();
+            }
         }
 
-        /// <returns>골드가 충분하면 차감 후 true, 부족하면 false</returns>
+        /// <returns>이제 로비에서 골드를 소모하지 않으므로 무조건 false를 반환합니다.</returns>
         public bool SpendGold(int amount)
         {
-            if (saveData.playerGold < amount) return false;
-            saveData.playerGold -= amount;
-            Save();
-            return true;
+            return false;
         }
 
-        /// <returns>크리스탈이 충분하면 차감 후 true, 부족하면 false</returns>
+        /// <returns>크리스탈이 충분하면 차감 후 true, 부족하면 false.</returns>
         public bool SpendGems(int amount)
         {
-            if (saveData.playerGems < amount) return false;
-            saveData.playerGems -= amount;
-            Save();
+            if (PlayerGems < amount) return false;
+
+            if (EconomyManager.Instance != null)
+            {
+                _ = EconomyManager.Instance.SpendCurrencyAsync(EconomyManager.CURRENCY_GEMS_ID, amount);
+            }
+            else
+            {
+                saveData.playerGems -= amount;
+                Save();
+            }
             return true;
         }
 

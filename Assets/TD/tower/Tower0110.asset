@@ -16,8 +16,17 @@ MonoBehaviour:
   towerName: 
   attackAttribute: 0
   attackType: 0
-  targetType: 2
-  upgradeTiers: []
+  targetType: 0
+  upgradeTiers:
+  - tierLevel: 0
+    buildOrUpgradeCost: 300
+    range: 1.8
+    damage: 20
+    attackSpeed: 1
+    sellPrice: 240
+    manaCost: 0
+    projectileSprite: {fileID: 0}
+    projectileAnim: {fileID: 0}
   assets:
     idleSprite: {fileID: 0}
     attackSprite: {fileID: 0}
@@ -33,8 +42,8 @@ MonoBehaviour:
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
     animatorController: {fileID: 0}
-    prefab: {fileID: 0}
-    projectilePrefab: {fileID: 0}
+    prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
+    projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
     hitEffectPrefab: {fileID: 0}
     visualScale: 1
     projectileScale: 0.5

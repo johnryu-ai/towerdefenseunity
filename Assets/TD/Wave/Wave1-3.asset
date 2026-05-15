@@ -50,3 +50,13 @@ MonoBehaviour:
       spawnInterval: 1
       startDelay: 0
       customWaypoints: []
+  - roundNumber: 4
+    clearReward: 0
+    nextRoundDelay: 5
+    spawnSequence:
+    - monsterToSpawn: {fileID: 11400000, guid: 5aa072d28919d8149ae25de21ee390d9, type: 2}
+      spawnPointIndex: 0
+      spawnCount: 5
+      spawnInterval: 1
+      startDelay: 0
+      customWaypoints: []

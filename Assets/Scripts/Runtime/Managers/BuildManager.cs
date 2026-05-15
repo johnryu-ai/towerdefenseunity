@@ -18,6 +18,7 @@ namespace TDF.Runtime.Managers
         // 업그레이드 UI 및 타워 관리용
         private Entities.TowerController selectedBuiltTower;
         private bool showUpgradePopup = false;
+        private bool isTargetingMode = false;
         private System.Collections.Generic.Dictionary<Vector2Int, Entities.TowerController> builtTowers = new System.Collections.Generic.Dictionary<Vector2Int, Entities.TowerController>();
 
         private void Awake()
@@ -62,7 +63,7 @@ namespace TDF.Runtime.Managers
             Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
             
             // 팝업이 띄워져 있을 때 클릭 처리
-            if (showTowerPopup || showUpgradePopup)
+            if (showTowerPopup || (showUpgradePopup && !isTargetingMode))
             {
                 float scaleX = 1920f / Screen.width;
                 float scaleY = 1080f / Screen.height;
@@ -74,16 +75,71 @@ namespace TDF.Runtime.Managers
                 }
                 else if (showUpgradePopup && !popupRect.Contains(guiMousePos))
                 {
-                    // 마우스가 타워 자체를 클릭한 경우 TowerController.OnMouseDown이 처리하도록 둠
-                    // 여기서는 팝업 외부를 클릭했을 때 팝업만 닫음
                     showUpgradePopup = false;
                     if (selectedBuiltTower != null) selectedBuiltTower.Deselect();
                     selectedBuiltTower = null;
                 }
-                return; // 팝업이 열려있으면 맵 짓기 클릭 무시
+                return;
             }
 
             Vector2 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
+
+            // 타겟팅 모드 처리
+            if (isTargetingMode && selectedBuiltTower != null)
+            {
+                Collider2D[] hits = Physics2D.OverlapPointAll(worldPos);
+                if (hits.Length > 0)
+                {
+                    Entities.MonsterController closestMonster = null;
+                    Entities.ObstacleController closestObstacle = null;
+                    float minDistance = float.MaxValue;
+
+                    foreach (var hit in hits)
+                    {
+                        float dist = Vector2.Distance(worldPos, hit.transform.position);
+                        if (dist < minDistance)
+                        {
+                            var monster = hit.GetComponent<Entities.MonsterController>();
+                            if (monster != null && selectedBuiltTower.IsValidTargetType(monster.GetFlyType()))
+                            {
+                                minDistance = dist;
+                                closestMonster = monster;
+                                closestObstacle = null;
+                            }
+                            else
+                            {
+                                var obstacle = hit.GetComponent<Entities.ObstacleController>();
+                                if (obstacle != null)
+                                {
+                                    minDistance = dist;
+                                    closestObstacle = obstacle;
+                                    closestMonster = null;
+                                }
+                            }
+                        }
+                    }
+
+                    if (closestMonster != null)
+                    {
+                        selectedBuiltTower.SetPriorityTarget(closestMonster);
+                        isTargetingMode = false;
+                        DeselectBuiltTower();
+                        return;
+                    }
+                    else if (closestObstacle != null)
+                    {
+                        selectedBuiltTower.SetPriorityTarget(closestObstacle);
+                        isTargetingMode = false;
+                        DeselectBuiltTower();
+                        return;
+                    }
+                }
+                
+                // 빈 바닥 클릭 시 타겟팅 모드 해제
+                isTargetingMode = false;
+                DeselectBuiltTower();
+                return;
+            }
             
             if (Map.MapController.Instance != null && GameManager.Instance.currentMapData != null)
             {
@@ -137,8 +193,13 @@ namespace TDF.Runtime.Managers
 
         public void DeselectBuiltTower()
         {
+            if (selectedBuiltTower != null)
+            {
+                selectedBuiltTower.Deselect();
+            }
             showUpgradePopup = false;
             selectedBuiltTower = null;
+            isTargetingMode = false; // 타겟팅 모드도 확실히 종료
         }
 
         private Rect popupRect;
@@ -252,11 +313,13 @@ namespace TDF.Runtime.Managers
 
                 GUILayout.Space(10);
 
-                // Target (Placeholder)
-                GUI.color = Color.cyan;
-                if (GUILayout.Button("Target:\nFirst", buttonStyle, GUILayout.Height(60)))
+                // Target First
+                GUI.color = isTargetingMode ? Color.yellow : Color.cyan;
+                string targetBtnText = isTargetingMode ? "Select\nTarget" : "Target:\nFirst";
+                if (GUILayout.Button(targetBtnText, buttonStyle, GUILayout.Height(60)))
                 {
-                    Debug.Log("Target mode not implemented yet.");
+                    isTargetingMode = !isTargetingMode;
+                    if (isTargetingMode) Debug.Log("우선 공격 대상을 선택하세요 (몬스터/장애물)");
                 }
                 GUI.color = Color.white;
 

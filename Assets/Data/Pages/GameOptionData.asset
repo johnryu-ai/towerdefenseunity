@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: GameOptionData
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: gameoption
-  pageType: 5
+  pageType: 6
   uiPrefab: {fileID: 2564587538018617360, guid: 54668b627042dbf48acc96d3b2423b6c, type: 3}
   visualLayout: {fileID: 11400000, guid: 664a25cbf1ddceb4097a83217e19f252, type: 2}
   isPopup: 1

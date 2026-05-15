@@ -30,7 +30,7 @@ namespace TDF.Runtime.UI
             // We'll just check if it's missing and warn.
             if (uiData == null)
             {
-                Debug.LogError("[LobbyUIBinder] uiData가 비어있습니다! 인스펙터에서 LobbyMenuUIData 에셋을 할당해주세요.");
+                // uiData는 생성 직후 LobbyManager에서 할당하므로 Awake에서의 에러 로그는 제거합니다.
                 return;
             }
         }
@@ -46,8 +46,18 @@ namespace TDF.Runtime.UI
 
         public void ApplyUI()
         {
+            if (uiData == null)
+            {
+                Debug.LogError("[LobbyUIBinder] uiData가 할당되지 않아 UI를 생성할 수 없습니다.");
+                return;
+            }
+
+            if (uiRoot == null) uiRoot = GetComponent<RectTransform>();
+            if (uiRoot == null) return;
+
             // Clear existing generated children
-            foreach (Transform child in uiRoot) {
+            foreach (Transform child in uiRoot) 
+            {
                 child.gameObject.SetActive(false);
                 Destroy(child.gameObject);
             }
@@ -395,24 +405,51 @@ namespace TDF.Runtime.UI
         {
             if (LobbyManager.Instance == null)
             {
-                Debug.LogWarning("LobbyManager.Instance is null. Cannot perform action.");
+                Debug.LogWarning("[LobbyUIBinder] LobbyManager.Instance is null. Cannot perform action.");
                 return;
             }
+
+            Debug.Log($"[LobbyUIBinder] Button Clicked: Name='{data.buttonName}', Text='{data.buttonText}', Action='{data.actionType}'");
 
             switch (data.actionType)
             {
                 case ButtonActionType.OpenPage:
                     if (data.targetPageAsset != null)
+                    {
+                        Debug.Log($"[LobbyUIBinder] Found targetPageAsset. Opening PageType: {data.targetPageAsset.pageType}");
                         LobbyManager.Instance.OpenPage(data.targetPageAsset.pageType);
+                    }
                     else
-                        Debug.LogWarning($"[LobbyUIBinder] Target Page Asset is not assigned for button: {data.buttonName}");
+                    {
+                        // Fallback: 버튼 이름/텍스트 기반으로 PageType 추론 (에셋 미할당 시 레거시 서브씬 지원)
+                        PageType fallbackType = PageType.Main;
+                        string bName = data.buttonName != null ? data.buttonName.ToUpper() : "";
+                        string bText = data.buttonText != null ? data.buttonText.ToUpper() : "";
+                        
+                        if (bName.Contains("STAGE") || bText.Contains("STAGE")) fallbackType = PageType.StageSelect;
+                        else if (bName.Contains("SHOP") || bText.Contains("SHOP")) fallbackType = PageType.Shop;
+                        else if (bName.Contains("ACHIEVEMENT") || bText.Contains("ACHIEVE") || bName.Contains("ACHIEVE") || bText.Contains("ACHIEVEMENT")) fallbackType = PageType.Achievement;
+                        else if (bName.Contains("LEADERBOARD") || bText.Contains("LEADERBOARD") || bName.Contains("RANK") || bText.Contains("RANK")) fallbackType = PageType.Leaderboard;
+                        else if (bName.Contains("EVENT") || bText.Contains("EVENT")) fallbackType = PageType.Event;
+
+                        Debug.Log($"[LobbyUIBinder] Target asset is null. Inferred Fallback PageType: {fallbackType}");
+
+                        if (fallbackType != PageType.Main)
+                        {
+                            LobbyManager.Instance.OpenPage(fallbackType);
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[LobbyUIBinder] Target Page Asset is not assigned and cannot infer fallback for button: {data.buttonName}");
+                        }
+                    }
                     break;
                 case ButtonActionType.StartGame:
+                    Debug.Log("[LobbyUIBinder] Starting Game...");
                     LobbyManager.Instance.StartGame();
                     break;
                 case ButtonActionType.CloseCurrentPage:
-                    // If we are on a generated page, we'd close it.
-                    // Assuming uiRoot is the page itself:
+                    Debug.Log("[LobbyUIBinder] Closing current page...");
                     LobbyManager.Instance.CloseCurrentPage(this.gameObject);
                     break;
             }

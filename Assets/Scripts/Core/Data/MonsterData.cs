@@ -13,6 +13,7 @@ namespace TDF.Core.Data
         public float health = 100f;
         public int killReward = 10;
         public int baseDamage = 1; // 기지에 가하는 데미지
+        public AttackAttribute immuneAttribute = AttackAttribute.Normal; // 면역 속성 (Normal = None)
     }
 
     [System.Serializable]

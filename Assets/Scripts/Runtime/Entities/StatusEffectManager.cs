@@ -14,9 +14,7 @@ namespace TDF.Runtime.Entities
         private float burnTimer = 0f;
         
         private float slowAmount = 0f; // 0 ~ 1 (예: 0.5면 50% 감속)
-        private float burnDamagePerTick = 0f;
-        private float burnTickTimer = 0f;
-        private const float BURN_TICK_RATE = 1f; // 1초마다 데미지
+        private float burnDamagePerSecond = 0f;
 
         public bool IsStunned => stunTimer > 0f;
         public float CurrentSpeedModifier => (slowTimer > 0f) ? (1f - slowAmount) : 1f;
@@ -32,7 +30,7 @@ namespace TDF.Runtime.Entities
             slowTimer = 0f;
             burnTimer = 0f;
             slowAmount = 0f;
-            burnDamagePerTick = 0f;
+            burnDamagePerSecond = 0f;
         }
 
         private void Update()
@@ -44,13 +42,7 @@ namespace TDF.Runtime.Entities
             if (burnTimer > 0f)
             {
                 burnTimer -= Time.deltaTime;
-                burnTickTimer += Time.deltaTime;
-                
-                if (burnTickTimer >= BURN_TICK_RATE)
-                {
-                    burnTickTimer -= BURN_TICK_RATE;
-                    if (monster != null) monster.TakeDamage(burnDamagePerTick);
-                }
+                if (monster != null) monster.TakeDamage(burnDamagePerSecond * Time.deltaTime);
             }
         }
 
@@ -68,7 +60,7 @@ namespace TDF.Runtime.Entities
         public void ApplyBurn(float duration, float dps)
         {
             if (duration > burnTimer) burnTimer = duration;
-            if (dps > burnDamagePerTick) burnDamagePerTick = dps;
+            if (dps > burnDamagePerSecond) burnDamagePerSecond = dps;
         }
     }
 }

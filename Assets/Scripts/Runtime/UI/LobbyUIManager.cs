@@ -160,7 +160,7 @@ namespace TDF.Runtime.UI
         {
             if (UserDataManager.Instance == null) return;
             GUI.Label(new Rect(1380, 0, 510, 110),
-                $"💰 {UserDataManager.Instance.PlayerGold}   💎 {UserDataManager.Instance.PlayerGems}", _bar);
+                $"💎 {UserDataManager.Instance.PlayerGems}", _bar);
         }
 
         bool BackBtn()
@@ -382,7 +382,7 @@ namespace TDF.Runtime.UI
                 GUI.Label(new Rect(20, y + 60, 700, 50),  item.description, new GUIStyle(_label) { fontSize = 24 });
 
                 bool bought = UserDataManager.Instance?.HasPurchased(item.itemId) ?? false;
-                string costLabel = item.costGold > 0 ? $"💰{item.costGold}" : $"💎{item.costGems}";
+                string costLabel = $"💎{item.costGems}";
 
                 if (bought)
                 {
@@ -405,15 +405,12 @@ namespace TDF.Runtime.UI
         void TryBuyItem(ShopItemData item)
         {
             if (UserDataManager.Instance == null) return;
-            bool ok = item.costGold > 0
-                ? UserDataManager.Instance.SpendGold(item.costGold)
-                : UserDataManager.Instance.SpendGems(item.costGems);
+            bool ok = UserDataManager.Instance.SpendGems(item.costGems);
 
             if (!ok) { Debug.Log("[Shop] 재화가 부족합니다."); return; }
 
-            UserDataManager.Instance.AddPurchase(item.itemId, item.itemName, item.costGold, item.costGems);
+            UserDataManager.Instance.AddPurchase(item.itemId, item.itemName, 0, item.costGems);
             // 보상 지급
-            if (item.rewardGold > 0) UserDataManager.Instance.AddCurrency(gold: item.rewardGold);
             if (item.rewardGems > 0) UserDataManager.Instance.AddCurrency(gems: item.rewardGems);
         }
 
@@ -468,7 +465,6 @@ namespace TDF.Runtime.UI
                     {
                         UserDataManager.Instance?.ClaimAchievementReward(def.achievementId);
                         if (def.rewardGems > 0) UserDataManager.Instance?.AddCurrency(gems: def.rewardGems);
-                        if (def.rewardGold > 0) UserDataManager.Instance?.AddCurrency(gold: def.rewardGold);
                     }
                     GUI.color = Color.white;
                 }
@@ -580,9 +576,9 @@ namespace TDF.Runtime.UI
 
                 var prog = UserDataManager.Instance?.GetEventProgress(ev.eventId);
                 string btnLabel = (prog != null && prog.completed && !prog.rewardClaimed)
-                    ? $"보상 수령\n💰+{ev.rewardGold}  💎+{ev.rewardGems}"
+                    ? $"보상 수령\n💎+{ev.rewardGems}"
                     : (prog != null && prog.rewardClaimed ? "수령 완료"
-                    : $"참여하기\n💰+{ev.rewardGold}  💎+{ev.rewardGems}");
+                    : $"참여하기\n💎+{ev.rewardGems}");
 
                 Color btnCol = (prog != null && prog.rewardClaimed) ? Color.gray : new Color(0.75f, 0.28f, 0.08f);
                 GUI.color = btnCol;
@@ -607,7 +603,6 @@ namespace TDF.Runtime.UI
             else if (prog.completed && !prog.rewardClaimed)
             {
                 UserDataManager.Instance.ClaimEventReward(ev.eventId);
-                if (ev.rewardGold > 0) UserDataManager.Instance.AddCurrency(gold: ev.rewardGold);
                 if (ev.rewardGems > 0) UserDataManager.Instance.AddCurrency(gems: ev.rewardGems);
             }
         }

@@ -7,7 +7,7 @@ namespace TDF.Editor
 
     public class TDMainEditorWindow : EditorWindow
     {
-        private enum Tab { Map, Tower, Monster, Wave, Stage, Campaign, AssetMeta, PageUI, LobbyUI }
+        private enum Tab { Map, Tower, Monster, Wave, Stage, Campaign, AssetMeta, PageUI, LobbyUI, Attribute }
         private Tab currentTab = Tab.Map;
 
         // 모듈 인스턴스
@@ -19,6 +19,7 @@ namespace TDF.Editor
         private CampaignEditorModule campaignEditorModule = new CampaignEditorModule();
         private PageEditorModule pageEditorModule = new PageEditorModule();
         private LobbyUIEditorModule lobbyUIEditorModule = new LobbyUIEditorModule();
+        private AttributeEditorModule attributeEditorModule = new AttributeEditorModule();
 
         [MenuItem("Tools/TDF/Tower Defense Editor")]
         public static void ShowWindow()
@@ -56,6 +57,7 @@ namespace TDF.Editor
             if (GUILayout.Toggle(currentTab == Tab.Campaign, "Campaign Editor", "Button")) currentTab = Tab.Campaign;
             if (GUILayout.Toggle(currentTab == Tab.PageUI, "Page & UI Editor", "Button")) currentTab = Tab.PageUI;
             if (GUILayout.Toggle(currentTab == Tab.LobbyUI, "Visual UI Editor", "Button")) currentTab = Tab.LobbyUI;
+            if (GUILayout.Toggle(currentTab == Tab.Attribute, "Attribute Settings", "Button")) currentTab = Tab.Attribute;
             if (GUILayout.Toggle(currentTab == Tab.AssetMeta, "Asset & Meta", "Button")) currentTab = Tab.AssetMeta;
 
             GUILayout.EndVertical();
@@ -90,6 +92,9 @@ namespace TDF.Editor
                     break;
                 case Tab.LobbyUI:
                     lobbyUIEditorModule.Draw();
+                    break;
+                case Tab.Attribute:
+                    attributeEditorModule.Draw();
                     break;
                 case Tab.AssetMeta:
                     GUILayout.Label("Asset & Meta Editor", EditorStyles.boldLabel);

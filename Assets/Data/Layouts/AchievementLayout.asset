@@ -36,6 +36,21 @@ MonoBehaviour:
     fontSize: 50
     fontStyle: 1
     fontAsset: {fileID: 0}
+  - buttonName: AchieveClaimAllButton
+    buttonImage: {fileID: 0}
+    buttonText: Claim All
+    buttonRect:
+      serializedVersion: 2
+      x: 1350
+      y: 50
+      width: 200
+      height: 80
+    actionType: 0
+    targetPageAsset: {fileID: 0}
+    textColor: {r: 1, g: 1, b: 1, a: 1}
+    fontSize: 28
+    fontStyle: 0
+    fontAsset: {fileID: 0}
   - buttonName: Achieve_archivement-clear5_Title
     buttonImage: {fileID: 0}
     buttonText: 'clear5 : Target 5'
@@ -51,9 +66,9 @@ MonoBehaviour:
     fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}
-  - buttonName: Achieve_archivement-clear5_Claim
+  - buttonName: Achieve_archivement-clear5_10_Claim
     buttonImage: {fileID: 0}
-    buttonText: Claim Reward
+    buttonText: "\U0001F48E 10"
     buttonRect:
       serializedVersion: 2
       x: 1150
@@ -63,7 +78,7 @@ MonoBehaviour:
     actionType: 0
     targetPageAsset: {fileID: 0}
     textColor: {r: 1, g: 1, b: 1, a: 1}
-    fontSize: 30
+    fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}
   - buttonName: Achieve_0101-01_Title
@@ -81,9 +96,9 @@ MonoBehaviour:
     fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}
-  - buttonName: Achieve_0101-01_Claim
+  - buttonName: Achieve_0101-01_10_Claim
     buttonImage: {fileID: 0}
-    buttonText: Claim Reward
+    buttonText: "\U0001F48E 10"
     buttonRect:
       serializedVersion: 2
       x: 1150
@@ -93,7 +108,7 @@ MonoBehaviour:
     actionType: 0
     targetPageAsset: {fileID: 0}
     textColor: {r: 1, g: 1, b: 1, a: 1}
-    fontSize: 30
+    fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}
   - buttonName: Achieve_0101-01_Title
@@ -111,9 +126,9 @@ MonoBehaviour:
     fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}
-  - buttonName: Achieve_0101-01_Claim
+  - buttonName: Achieve_0101-01_10_Claim
     buttonImage: {fileID: 0}
-    buttonText: Claim Reward
+    buttonText: "\U0001F48E 10"
     buttonRect:
       serializedVersion: 2
       x: 1150
@@ -123,6 +138,6 @@ MonoBehaviour:
     actionType: 0
     targetPageAsset: {fileID: 0}
     textColor: {r: 1, g: 1, b: 1, a: 1}
-    fontSize: 30
+    fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}

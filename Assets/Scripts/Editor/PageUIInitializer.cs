@@ -237,14 +237,20 @@ namespace TDF.Editor
                     break;
 
                 case PageType.GameOption:
-                    string[] options = { "BGM : ON", "SFX : ON", "PUSH ALARM : OFF" };
+                    string[] options = { "BGM : ON", "SFX : ON", "PUSH ALARM : OFF", "LOGOUT", "QUIT GAME" };
                     for (int i = 0; i < options.Length; i++)
                     {
                         LobbyButtonData optBtn = new LobbyButtonData();
-                        optBtn.buttonName = $"Option_{i}";
+                        optBtn.buttonName = (options[i] == "LOGOUT") ? "LogoutButton" : 
+                                            (options[i] == "QUIT GAME") ? "QuitButton" : $"Option_{i}";
                         optBtn.buttonText = options[i];
-                        optBtn.buttonRect = new Rect(660, 300 + i * 150, 600, 100);
+                        optBtn.buttonRect = new Rect(660, 250 + i * 130, 600, 100);
                         optBtn.fontSize = 35;
+                        optBtn.actionType = ButtonActionType.Custom; // UI Binder가 자체 처리하지 않도록 Custom 지정
+
+                        if (options[i] == "LOGOUT") optBtn.textColor = Color.yellow;
+                        if (options[i] == "QUIT GAME") optBtn.textColor = new Color(1f, 0.4f, 0.4f);
+
                         data.buttons.Add(optBtn);
                     }
                     break;

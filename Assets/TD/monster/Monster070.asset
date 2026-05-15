@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 307021b62d8ca7c43bcf8988bd7daec3, type: 3}
   m_Name: Monster070
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.MonsterData
-  monsterId: 
-  monsterName: 
+  monsterId: Monster0070
+  monsterName: Air1
   stats:
     moveSpeed: 1
-    health: 100
+    health: 30
     killReward: 10
     baseDamage: 1
-  flyType: 0
-  movementType: 0
+  flyType: 1
+  movementType: 1
   splitLogic:
     splitOnDeath: 0
     splitMonsterType: {fileID: 0}
@@ -31,5 +31,5 @@ MonoBehaviour:
     dieSprite: {fileID: 0}
     moveAnim: {fileID: 0}
     animatorController: {fileID: 0}
-    prefab: {fileID: 0}
+    prefab: {fileID: 5462296911220689134, guid: cc64eaa1e5cb3014f96b98080e48924f, type: 3}
     visualScale: 1

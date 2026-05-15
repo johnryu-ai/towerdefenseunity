@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d1b84e10cd5d4b408e4c83bfc4ecafd, type: 3}
+  m_Name: Stage1-5
+  m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.StageData
+  stageIndex: 5
+  linkedMapData: {fileID: 11400000, guid: 54e89d5f59725c349876644ee80a3bcc, type: 2}
+  entryStory: []
+  clearStory: []
+  waveData: {fileID: 11400000, guid: eca774b32da644b4a8b84638f7958a88, type: 2}

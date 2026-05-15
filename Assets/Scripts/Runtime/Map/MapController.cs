@@ -10,13 +10,13 @@ namespace TDF.Runtime.Map
         public static MapController Instance { get; private set; }
 
         [Header("References")]
-        public GameObject tilePrefab; // SpriteRenderer가 있는 기본 빈 타일 프리팹
-        public Transform tileContainer; // 생성된 타일들을 묶어둘 부모 Transform
+        public GameObject tilePrefab; 
+        public Transform tileContainer; 
 
         private MapData currentMapData;
         private GameObject[,] spawnedTiles;
 
-        public const float TILE_SIZE = 1f; // 타일 한 칸의 월드 사이즈 (유닛)
+        public const float TILE_SIZE = 1f; 
         public float offsetX { get; private set; }
         public float offsetY { get; private set; }
 
@@ -28,72 +28,52 @@ namespace TDF.Runtime.Map
 
         private void Start()
         {
-            // 전체 화면 해상도를 FHD(1920x1080)로 고정
             Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
-
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;
-                Camera.main.backgroundColor = new Color(0.2f, 0.2f, 0.2f); // 남는 영역 회색
+                Camera.main.backgroundColor = new Color(0.2f, 0.2f, 0.2f);
             }
         }
 
         public void GenerateMap(MapData mapData)
         {
-            if (mapData == null)
-            {
-                Debug.LogError("MapController: MapData가 없습니다.");
-                return;
-            }
+            if (mapData == null) return;
+            currentMapData = mapData;
 
             if (tilePrefab == null)
             {
-                Debug.LogWarning("MapController: tilePrefab이 할당되지 않아 코드로 기본 타일을 생성합니다.");
                 tilePrefab = new GameObject("DefaultTilePrefab");
                 var sr = tilePrefab.AddComponent<SpriteRenderer>();
-                
-                // 1x1 유닛 크기의 흰색 스프라이트 생성
                 Texture2D tex = new Texture2D(100, 100);
                 Color[] colors = new Color[100 * 100];
                 for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
                 tex.SetPixels(colors);
                 tex.Apply();
                 sr.sprite = Sprite.Create(tex, new Rect(0, 0, 100, 100), new Vector2(0.5f, 0.5f), 100f);
-                
-                tilePrefab.SetActive(false); // 프리팹처럼 안보이게 숨김
+                tilePrefab.SetActive(false);
             }
 
-            currentMapData = mapData;
             spawnedTiles = new GameObject[mapData.gridWidth, mapData.gridHeight];
-
-            // ── 카메라 자동 스케일링 (위아래 꽉 차게 중앙 정렬) ──
+            float mapWorldWidth = mapData.gridWidth * TILE_SIZE;
             float mapWorldHeight = mapData.gridHeight * TILE_SIZE;
-            
             if (Camera.main != null)
             {
-                Camera.main.orthographic = true;
-                // 위아래로 꽉 차게 만들기 위해 세로 길이의 절반을 orthographicSize로 설정
                 Camera.main.orthographicSize = mapWorldHeight / 2f;
-                
-                // 맵이 정중앙에 위치하도록 카메라 위치 초기화 (오프셋 없음)
-                Vector3 camPos = Camera.main.transform.position;
-                Camera.main.transform.position = new Vector3(0, 0, camPos.z);
+                // 카메라를 맵 중앙으로 이동 (0,0이 최좌측 하단이므로 중앙은 너비/높이의 절반)
+                Camera.main.transform.position = new Vector3(mapWorldWidth / 2f - (TILE_SIZE / 2f), mapWorldHeight / 2f - (TILE_SIZE / 2f), Camera.main.transform.position.z);
             }
 
-            // 기존 타일 초기화
             if (tileContainer == null)
             {
                 tileContainer = new GameObject("TileContainer").transform;
                 tileContainer.SetParent(this.transform);
             }
-            foreach (Transform child in tileContainer)
-            {
-                Destroy(child.gameObject);
-            }
+            foreach (Transform child in tileContainer) Destroy(child.gameObject);
 
-            // 중심을 맞추기 위한 오프셋 계산 (화면 중앙에 맵 배치)
-            offsetX = -mapData.gridWidth * TILE_SIZE / 2f + (TILE_SIZE / 2f);
-            offsetY = -mapData.gridHeight * TILE_SIZE / 2f + (TILE_SIZE / 2f); // Bottom-Left
+            // [수정] 0,0이 항상 화면 최하단 좌측 타일이 되도록 오프셋을 0으로 설정
+            offsetX = 0f;
+            offsetY = 0f;
 
             for (int y = 0; y < mapData.gridHeight; y++)
             {
@@ -103,42 +83,50 @@ namespace TDF.Runtime.Map
                     GameObject tileObj = Instantiate(tilePrefab, position, Quaternion.identity, tileContainer);
                     tileObj.SetActive(true);
                     tileObj.name = $"Tile_{x}_{y}";
-                    
                     TileType type = mapData.GetTileAt(x, y);
                     SpriteRenderer sr = tileObj.GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        // TODO: 실제 프로젝트에서는 type에 따라 다른 Sprite 할당 로직이 들어갑니다.
-                        // mapData.tileSprite 등을 사용할 수 있습니다.
-                        sr.color = GetColorForTile(type); // 임시 시각화용 색상
-                    }
-
+                    if (sr != null) sr.color = GetColorForTile(type);
                     spawnedTiles[x, y] = tileObj;
                 }
             }
 
-            // 배경 이미지 세팅
+            SpawnObstacles(mapData);
+
             if (mapData.backgroundSprite != null)
             {
                 GameObject bgObj = new GameObject("Background");
                 bgObj.transform.SetParent(this.transform);
-                // 맵 화면 정중앙에 배치 (카메라 기준 중앙이 Vector3.zero)
-                bgObj.transform.position = Vector3.zero;
+                // 맵의 (0,0)이 좌하단이므로, 백그라운드 이미지는 맵의 중앙(카메라 위치)으로 이동시켜야 함
+                bgObj.transform.position = new Vector3(mapWorldWidth / 2f - (TILE_SIZE / 2f), mapWorldHeight / 2f - (TILE_SIZE / 2f), 0);
+                
                 SpriteRenderer bgSr = bgObj.AddComponent<SpriteRenderer>();
                 bgSr.sprite = mapData.backgroundSprite;
-                bgSr.sortingOrder = 5; // 타일(0) 위에, 유닛들(10+) 아래에 그려지도록 설정
-
-                // 1920x1080 (FHD) 비율에 맞게 정확히 덮어씌우기 위한 스케일 계산
+                bgSr.sortingOrder = 5;
                 if (Camera.main != null)
                 {
                     float screenHeightUnits = Camera.main.orthographicSize * 2f;
                     float screenWidthUnits = screenHeightUnits * (1920f / 1080f);
-
-                    float scaleX = screenWidthUnits / bgSr.sprite.bounds.size.x;
-                    float scaleY = screenHeightUnits / bgSr.sprite.bounds.size.y;
-
-                    bgObj.transform.localScale = new Vector3(scaleX, scaleY, 1f);
+                    bgObj.transform.localScale = new Vector3(screenWidthUnits / bgSr.sprite.bounds.size.x, screenHeightUnits / bgSr.sprite.bounds.size.y, 1f);
                 }
+            }
+        }
+
+        private void SpawnObstacles(MapData mapData)
+        {
+            foreach(var obs in Entities.ObstacleController.ActiveObstacles)
+            {
+                if (obs != null) Destroy(obs.gameObject);
+            }
+            Entities.ObstacleController.ActiveObstacles.Clear();
+
+            foreach (var po in mapData.obstacles)
+            {
+                if (po.data == null) continue;
+                Vector3 pos = GetWorldPosition(po.coordinate.x, po.coordinate.y);
+                GameObject obsObj = new GameObject($"Obstacle_{po.data.obstacleName}");
+                obsObj.transform.position = pos;
+                var controller = obsObj.AddComponent<Entities.ObstacleController>();
+                controller.Initialize(po.data, po.coordinate);
             }
         }
 
@@ -160,7 +148,7 @@ namespace TDF.Runtime.Map
             }
         }
 
-        public List<Vector2> GetPath(int spawnPointIndex = -1)
+        public List<Vector2> GetPath(int spawnPointIndex = -1, Vector2Int? startCoord = null, Vector2Int? directionHint = null, bool isAir = false)
         {
             List<Vector2> path = new List<Vector2>();
             if (currentMapData == null) return path;
@@ -171,72 +159,46 @@ namespace TDF.Runtime.Map
             int spawnX = -1, spawnY = -1;
             int baseX = -1, baseY = -1;
 
-            // 1. 수동 지정된 스폰 포인트 확인
-            if (spawnPointIndex >= 0 && spawnPointIndex < currentMapData.spawnPoints.Count)
+            if (startCoord.HasValue)
             {
-                var sp = currentMapData.spawnPoints[spawnPointIndex];
-                
-                // 스폰 포인트에 수동 지정된 경로가 있다면 우선 사용 (주로 길 없는 공중 유닛용)
-                if (sp.pathWaypoints != null && sp.pathWaypoints.Count > 0)
+                spawnX = startCoord.Value.x;
+                spawnY = startCoord.Value.y;
+            }
+            else
+            {
+                if (spawnPointIndex < 0 || spawnPointIndex >= currentMapData.spawnPoints.Count)
                 {
-                    bool isInvalidPath = false;
-                    List<Vector2> worldPath = new List<Vector2>();
-                    for (int i = 0; i < sp.pathWaypoints.Count; i++)
-                    {
-                        Vector2 blCoord = sp.pathWaypoints[i];
-                        int gx = Mathf.RoundToInt(blCoord.x);
-                        int gy = Mathf.RoundToInt(blCoord.y);
-                        
-                        // 오래된 월드 좌표 데이터이거나 범위를 벗어난 경우 무시
-                        if (gx < 0 || gx >= currentMapData.gridWidth || gy < 0 || gy >= currentMapData.gridHeight)
-                        {
-                            isInvalidPath = true;
-                            break;
-                        }
-                        
-                        worldPath.Add(GetWorldPosition(gx, gy));
-                    }
-                    
-                    if (!isInvalidPath)
-                    {
-                        return worldPath;
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"SpawnPoint {spawnPointIndex} has invalid or old manual path data. Ignoring it and using BFS.");
-                    }
+                    if (currentMapData.spawnPoints.Count > 0) spawnPointIndex = 0;
                 }
 
-                // 지상 유닛 자동 길찾기를 위한 좌표
-                int tempX = sp.coordinate.x;
-                int tempY = sp.coordinate.y;
-                
-                // 만약 사용자가 에디터에서 Sync를 안 눌러서 좌표가 엉뚱한 곳을 가리킨다면, 무시하고 아래에서 동적으로 찾음
-                if (currentMapData.GetTileAt(tempX, tempY) == TileType.Spawn)
+                if (spawnPointIndex >= 0 && spawnPointIndex < currentMapData.spawnPoints.Count)
                 {
-                    spawnX = tempX;
-                    spawnY = tempY;
+                    var sp = currentMapData.spawnPoints[spawnPointIndex];
+                    
+                    // [수정] Map에 수동 경로(manual path waypoint)가 있다면 그것을 즉시 반환
+                    if (sp.pathWaypoints != null && sp.pathWaypoints.Count > 0)
+                    {
+                        return new List<Vector2>(sp.pathWaypoints);
+                    }
+
+                    spawnX = sp.coordinate.x;
+                    spawnY = sp.coordinate.y;
                 }
             }
 
-            // 2. Base 위치 찾기 및 Spawn 위치 (지정 안된 경우 첫번째) 찾기
             for (int y = 0; y < gridH; y++)
             {
                 for (int x = 0; x < gridW; x++)
                 {
-                    TileType t = currentMapData.GetTileAt(x, y);
-                    if (t == TileType.Spawn && spawnX == -1) { spawnX = x; spawnY = y; }
-                    else if (t == TileType.Base) { baseX = x; baseY = y; }
+                    if (currentMapData.GetTileAt(x, y) == TileType.Base) { baseX = x; baseY = y; break; }
                 }
+                if (baseX != -1) break;
             }
 
             if (spawnX == -1 || baseX == -1) return path;
 
-            // 1. 기지(Base)로부터 각 타일까지의 최단 거리 계산 (BFS)
             int[,] distances = new int[gridW, gridH];
-            for (int x = 0; x < gridW; x++)
-                for (int y = 0; y < gridH; y++)
-                    distances[x, y] = int.MaxValue;
+            for (int x = 0; x < gridW; x++) for (int y = 0; y < gridH; y++) distances[x, y] = int.MaxValue;
 
             Queue<Vector2Int> queue = new Queue<Vector2Int>();
             queue.Enqueue(new Vector2Int(baseX, baseY));
@@ -255,7 +217,11 @@ namespace TDF.Runtime.Map
                     if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH)
                     {
                         TileType type = currentMapData.GetTileAt(nx, ny);
-                        if ((type == TileType.Path || type == TileType.Spawn) && distances[nx, ny] == int.MaxValue)
+                        
+                        // 공중 유닛은 타일 종류와 장애물을 무시하고 이동 가능
+                        bool canPass = isAir || ((type == TileType.Path || type == TileType.Spawn || type == TileType.Base) && !HasObstacleAt(nx, ny));
+
+                        if (canPass && distances[nx, ny] == int.MaxValue)
                         {
                             distances[nx, ny] = distances[curr.x, curr.y] + 1;
                             queue.Enqueue(new Vector2Int(nx, ny));
@@ -264,85 +230,102 @@ namespace TDF.Runtime.Map
                 }
             }
 
-            // 2. 몬스터 이동 시뮬레이션
             Vector2Int currentPos = new Vector2Int(spawnX, spawnY);
-            path.Add(GetWorldPosition(currentPos.x, currentPos.y));
+            Vector3 worldSpawnPos = GetWorldPosition(currentPos.x, currentPos.y);
+            if (worldSpawnPos == Vector3.zero) worldSpawnPos = new Vector3(offsetX + (currentPos.x * TILE_SIZE), offsetY + (currentPos.y * TILE_SIZE), 0);
+            
+            path.Add(worldSpawnPos);
 
-            // 시작 방향 결정 (가장 거리가 짧은 유효 타일 방향)
-            Vector2Int currentDir = Vector2Int.zero;
-            int minDist = int.MaxValue;
-            for (int i = 0; i < 4; i++)
+            if (distances[spawnX, spawnY] == int.MaxValue)
             {
-                int nx = currentPos.x + dx[i];
-                int ny = currentPos.y + dy[i];
-                if (IsValidPathTile(nx, ny, gridW, gridH))
-                {
-                    if (distances[nx, ny] < minDist)
-                    {
-                        minDist = distances[nx, ny];
-                        currentDir = new Vector2Int(dx[i], dy[i]);
-                    }
-                }
-            }
-
-            if (currentDir == Vector2Int.zero) 
-            {
-                // 길이 끊겨있거나 찾을 수 없는 경우 (주로 공중 유닛 스폰 포인트)
-                // 즉사하지 않도록 강제로 기지(Base)를 목적지로 추가하여 직선으로 날아가게 합니다.
-                path.Add(GetWorldPosition(baseX, baseY));
+                Debug.LogWarning($"[MapController] No path found from ({spawnX}, {spawnY}) to base!");
                 return path;
             }
 
+            Vector2Int lastDir = directionHint ?? Vector2Int.zero;
             int safeguard = 0;
+            
+            // BFS distances are still needed to know IF a path exists and to prevent infinite loops/dead ends,
+            // but the priority logic will now favor straight lines even if a turn has the same or slightly better distance.
+            
             while (currentPos.x != baseX || currentPos.y != baseY)
             {
                 safeguard++;
-                if (safeguard > gridW * gridH * 2) break; // 무한 루프 방지
+                if (safeguard > gridW * gridH) break;
 
-                Vector2Int forward = currentPos + currentDir;
-                bool canGoForward = IsValidPathTile(forward.x, forward.y, gridW, gridH);
+                Vector2Int bestNext = currentPos;
+                int currentDist = distances[currentPos.x, currentPos.y];
 
-                if (canGoForward)
+                // 1. [최우선] 직진 확인: 진행 방향에 길이 있고, 그 길을 통해 기지에 도달 가능하다면 무조건 선택
+                if (lastDir != Vector2Int.zero)
                 {
-                    // 직진
-                    currentPos = forward;
-                    path.Add(GetWorldPosition(currentPos.x, currentPos.y));
-                }
-                else
-                {
-                    // 막힘: 90도 회전
-                    Vector2Int left = new Vector2Int(-currentDir.y, currentDir.x);
-                    Vector2Int right = new Vector2Int(currentDir.y, -currentDir.x);
-
-                    Vector2Int posLeft = currentPos + left;
-                    Vector2Int posRight = currentPos + right;
-
-                    bool canGoLeft = IsValidPathTile(posLeft.x, posLeft.y, gridW, gridH);
-                    bool canGoRight = IsValidPathTile(posRight.x, posRight.y, gridW, gridH);
-
-                    if (canGoLeft && canGoRight)
+                    int nx = currentPos.x + lastDir.x;
+                    int ny = currentPos.y + lastDir.y;
+                    if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH)
                     {
-                        // 양쪽 다 길이 있는 T자형 막다른 길이면 기지에 가까운 쪽 선택
-                        int distLeft = distances[posLeft.x, posLeft.y];
-                        int distRight = distances[posRight.x, posRight.y];
-                        
-                        if (distLeft <= distRight) currentDir = left;
-                        else currentDir = right;
+                        // 해당 칸이 도달 가능한 칸(distances < max)이라면 직진
+                        if (distances[nx, ny] != int.MaxValue)
+                        {
+                            bestNext = new Vector2Int(nx, ny);
+                            currentPos = bestNext;
+                            path.Add(GetWorldPosition(currentPos.x, currentPos.y));
+                            continue; 
+                        }
                     }
-                    else if (canGoLeft) currentDir = left;
-                    else if (canGoRight) currentDir = right;
-                    else break; // 막다른 길
                 }
-            }
 
+                // 2. [차선] 90도 회전: 직진이 막힌 경우에만 기지와 가장 가까운 90도 방향 선택
+                List<Vector2Int> turnDirs = new List<Vector2Int>();
+                if (lastDir.x != 0) { turnDirs.Add(new Vector2Int(0, 1)); turnDirs.Add(new Vector2Int(0, -1)); }
+                else if (lastDir.y != 0) { turnDirs.Add(new Vector2Int(1, 0)); turnDirs.Add(new Vector2Int(-1, 0)); }
+                else turnDirs.AddRange(new Vector2Int[] { new Vector2Int(1,0), new Vector2Int(-1,0), new Vector2Int(0,1), new Vector2Int(0,-1) });
+
+                int minDist = int.MaxValue;
+                bool foundTurn = false;
+                foreach (var dir in turnDirs)
+                {
+                    int nx = currentPos.x + dir.x;
+                    int ny = currentPos.y + dir.y;
+                    if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH)
+                    {
+                        if (distances[nx, ny] < minDist)
+                        {
+                            minDist = distances[nx, ny];
+                            bestNext = new Vector2Int(nx, ny);
+                            lastDir = dir;
+                            foundTurn = true;
+                        }
+                    }
+                }
+
+                if (!foundTurn) 
+                {
+                    // 3. [최후] 역주행: 모든 길이 막혔을 때만 고려
+                    Vector2Int reverse = -lastDir;
+                    int nx = currentPos.x + reverse.x;
+                    int ny = currentPos.y + reverse.y;
+                    if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH && distances[nx, ny] != int.MaxValue)
+                    {
+                        bestNext = new Vector2Int(nx, ny);
+                        lastDir = reverse;
+                    }
+                    else break; 
+                }
+
+                currentPos = bestNext;
+                path.Add(GetWorldPosition(currentPos.x, currentPos.y));
+            }
+            
             return path;
         }
 
-        private bool IsValidPathTile(int x, int y, int gridW, int gridH)
+        private bool HasObstacleAt(int x, int y)
         {
-            if (x < 0 || x >= gridW || y < 0 || y >= gridH) return false;
-            TileType type = currentMapData.GetTileAt(x, y);
-            return type == TileType.Path || type == TileType.Base;
+            foreach (var obs in Entities.ObstacleController.ActiveObstacles)
+            {
+                if (obs.GridPos.x == x && obs.GridPos.y == y) return true;
+            }
+            return false;
         }
 
         private Color GetColorForTile(TileType type)

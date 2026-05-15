@@ -99,10 +99,16 @@ namespace TDF.Runtime.Managers
 
                 yield return new WaitForSeconds(spawnInfo.startDelay);
 
-                // WaveData에 직접 설정한 경로가 있으면 우선 사용, 없으면 MapController 자동 탐색 사용
-                List<Vector2> path = (spawnInfo.customWaypoints != null && spawnInfo.customWaypoints.Count > 0) 
-                    ? spawnInfo.customWaypoints 
-                    : Map.MapController.Instance.GetPath(spawnInfo.spawnPointIndex);
+                // [몬스터 길찾기 로직 업데이트]
+                // 1순위(Map 수동경로) 및 2순위(Path 타일 경로)는 MapController.GetPath 내부에서 통합 관리됩니다.
+                bool isAir = spawnInfo.monsterToSpawn.flyType == MonsterFlyType.Air;
+                List<Vector2> path = Map.MapController.Instance.GetPath(spawnInfo.spawnPointIndex, null, null, false);
+
+                // 공중 유닛의 경우, 수동경로도 없고 타일 경로도 없을 때만 지형 무시 비행(3순위) 적용
+                if (isAir && (path == null || path.Count <= 1))
+                {
+                    path = Map.MapController.Instance.GetPath(spawnInfo.spawnPointIndex, null, null, true);
+                }
 
                 if (path == null || path.Count == 0)
                 {

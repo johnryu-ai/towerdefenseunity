@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace TDF.Core.Data
 {
-    public enum ButtonActionType { OpenPage, StartGame, CloseCurrentPage }
+    public enum ButtonActionType { OpenPage, StartGame, CloseCurrentPage, Custom }
 
     [System.Serializable]
     public class LobbyButtonData

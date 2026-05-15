@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: LeaderboardData
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: leaderboard
-  pageType: 6
+  pageType: 7
   uiPrefab: {fileID: 6848594634890939838, guid: b9e36f3e3a1df6e48b1803bd5d817c20, type: 3}
   visualLayout: {fileID: 11400000, guid: 5719df9f5df89e94e89f8712aeb960a5, type: 2}
   isPopup: 0

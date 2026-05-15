@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Achievement
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: achievement
-  pageType: 7
+  pageType: 8
   uiPrefab: {fileID: 0}
   visualLayout: {fileID: 11400000, guid: c2e12192f0add264b865f462f7a3279a, type: 2}
   isPopup: 0

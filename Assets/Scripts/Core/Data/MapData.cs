@@ -22,6 +22,13 @@ namespace TDF.Core.Data
     }
 
     [System.Serializable]
+    public class PlacedObstacle
+    {
+        public Vector2Int coordinate;
+        public ObstacleData data;
+    }
+
+    [System.Serializable]
     public class SpawnPointData
     {
         public string spawnId = "Spawn_0";
@@ -49,6 +56,9 @@ namespace TDF.Core.Data
         [Header("Visuals")]
         public Sprite backgroundSprite;
         public Sprite tileSprite;
+
+        [Header("Obstacles")]
+        public List<PlacedObstacle> obstacles = new List<PlacedObstacle>();
 
         private TileType[] runtimeGridLayout;
         private static int playSessionId = 0;

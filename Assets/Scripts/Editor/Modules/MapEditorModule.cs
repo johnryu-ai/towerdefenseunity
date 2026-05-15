@@ -10,6 +10,9 @@ namespace TDF.Editor.Modules
         private MapData targetMap;
         private Vector2 scrollPos;
         private TileType currentBrush = TileType.Path;
+        private bool isObstacleBrush = false;
+        private bool isEraser = false;
+        private ObstacleData selectedObstacle;
         private int editingSpawnPathIndex = -1;
 
         private const float TILE_SIZE = 40f;
@@ -90,7 +93,26 @@ namespace TDF.Editor.Modules
             else
             {
                 GUILayout.BeginHorizontal();
-                currentBrush = (TileType)EditorGUILayout.EnumPopup("Tile Brush", currentBrush);
+                
+                if (GUILayout.Toggle(!isObstacleBrush && !isEraser, "Tile", "Button")) { isObstacleBrush = false; isEraser = false; }
+                if (GUILayout.Toggle(isObstacleBrush, "Obstacle", "Button")) { isObstacleBrush = true; isEraser = false; }
+                if (GUILayout.Toggle(isEraser, "Eraser", "Button")) { isObstacleBrush = false; isEraser = true; }
+                
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
+                if (isEraser)
+                {
+                    EditorGUILayout.HelpBox("Eraser Mode: Click to remove Obstacles. Right-click to reset Tiles to Buildable.", MessageType.Info);
+                }
+                else if (isObstacleBrush)
+                {
+                    selectedObstacle = (ObstacleData)EditorGUILayout.ObjectField("Obstacle Data", selectedObstacle, typeof(ObstacleData), false);
+                }
+                else
+                {
+                    currentBrush = (TileType)EditorGUILayout.EnumPopup("Tile Brush", currentBrush);
+                }
                 GUILayout.EndHorizontal();
             }
         }
@@ -220,6 +242,20 @@ namespace TDF.Editor.Modules
                         // 테두리
                         Handles.color = Color.black;
                         Handles.DrawWireCube(tileRect.center, tileRect.size);
+
+                        // 장애물 표시
+                        var obs = targetMap.obstacles.Find(o => o.coordinate == new Vector2Int(x, y));
+                        if (obs != null)
+                        {
+                            if (obs.data != null && obs.data.sprite != null)
+                            {
+                                GUI.DrawTexture(tileRect, obs.data.sprite.texture);
+                            }
+                            else
+                            {
+                                GUI.Label(tileRect, "OBS", EditorStyles.centeredGreyMiniLabel);
+                            }
+                        }
                     }
                 }
 
@@ -295,17 +331,43 @@ namespace TDF.Editor.Modules
                         else
                         {
                             // Normal Brush Mode
-                            if (targetMap.GetTileAt(x, y) != currentBrush)
+                            Undo.RecordObject(targetMap, "Map Edit");
+                            if (isEraser)
                             {
-                                Undo.RecordObject(targetMap, "Paint Tile");
-                                targetMap.SetTileAt(x, y, currentBrush);
-                                EditorUtility.SetDirty(targetMap);
+                                targetMap.obstacles.RemoveAll(o => o.coordinate == new Vector2Int(x, y));
                             }
+                            else if (isObstacleBrush)
+                            {
+                                if (selectedObstacle != null)
+                                {
+                                    targetMap.obstacles.RemoveAll(o => o.coordinate == new Vector2Int(x, y));
+                                    targetMap.obstacles.Add(new PlacedObstacle { coordinate = new Vector2Int(x, y), data = selectedObstacle });
+                                }
+                            }
+                            else
+                            {
+                                targetMap.SetTileAt(x, y, currentBrush);
+                            }
+                            EditorUtility.SetDirty(targetMap);
                             e.Use();
                         }
                     }
                     else if (e.button == 1 && e.type == EventType.MouseDown) // 오른쪽 클릭
                     {
+                        if (isEraser || isObstacleBrush)
+                        {
+                            int x = Mathf.FloorToInt((e.mousePosition.x - gridRect.x) / TILE_SIZE);
+                            int guiY = Mathf.FloorToInt((e.mousePosition.y - gridRect.y) / TILE_SIZE);
+                            int y = targetMap.gridHeight - 1 - guiY;
+
+                            Undo.RecordObject(targetMap, "Remove Obstacle");
+                            targetMap.obstacles.RemoveAll(o => o.coordinate == new Vector2Int(x, y));
+                            if (isEraser) targetMap.SetTileAt(x, y, TileType.Buildable);
+                            EditorUtility.SetDirty(targetMap);
+                            e.Use();
+                            return;
+                        }
+
                         if (editingSpawnPathIndex >= 0 && editingSpawnPathIndex < targetMap.spawnPoints.Count)
                         {
                             var list = targetMap.spawnPoints[editingSpawnPathIndex].pathWaypoints;

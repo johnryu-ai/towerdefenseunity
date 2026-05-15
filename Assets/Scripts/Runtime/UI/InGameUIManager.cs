@@ -112,6 +112,15 @@ namespace TDF.Runtime.UI
                 }
 
                 GUILayout.BeginArea(new Rect(460, 240, 1000, 600), GUI.skin.box);
+                
+                // 우측 상단 닫기(X) 버튼 (메인 메뉴로 복귀)
+                GUIStyle closeBtnStyle = new GUIStyle(GUI.skin.button) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
+                closeBtnStyle.normal.textColor = Color.red;
+                if (GUI.Button(new Rect(920, 20, 60, 60), "X", closeBtnStyle))
+                {
+                    GameManager.Instance.GoToMainMenu();
+                }
+
                 GUILayout.Space(50);
                 
                 GUIStyle titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 60, alignment = TextAnchor.MiddleCenter };

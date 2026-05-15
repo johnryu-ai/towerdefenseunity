@@ -68,6 +68,16 @@ namespace TDF.Editor.Modules
             stats.moveSpeed = EditorGUILayout.FloatField("Move Speed", stats.moveSpeed);
             stats.killReward = EditorGUILayout.IntField("Kill Reward (Gold)", stats.killReward);
             stats.baseDamage = EditorGUILayout.IntField("Base Damage (To Player)", stats.baseDamage);
+            
+            // Immunity Selection (Mapping user terms to internal enums)
+            string[] immuneOptions = { "None", "Fire", "Ice", "Lightning" };
+            AttackAttribute[] immuneValues = { AttackAttribute.Normal, AttackAttribute.Fire, AttackAttribute.Cold, AttackAttribute.Electric };
+            
+            int currentIndex = System.Array.IndexOf(immuneValues, stats.immuneAttribute);
+            if (currentIndex == -1) currentIndex = 0; // Default to None
+
+            int nextIndex = EditorGUILayout.Popup("Immune Attribute", currentIndex, immuneOptions);
+            stats.immuneAttribute = immuneValues[nextIndex];
 
             if (EditorGUI.EndChangeCheck())
             {

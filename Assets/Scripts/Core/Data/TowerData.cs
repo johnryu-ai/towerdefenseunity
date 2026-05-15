@@ -15,6 +15,7 @@ namespace TDF.Core.Data
         public float range;
         public float damage;
         public float attackSpeed; // 1초당 공격 횟수 등
+        public float projectileSpeed = 10f; // 발사체 이동 속도
         public int sellPrice;
         public float manaCost;
 

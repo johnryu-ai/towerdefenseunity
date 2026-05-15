@@ -42,10 +42,10 @@ MonoBehaviour:
     buttonRect:
       serializedVersion: 2
       x: 660
-      y: 300
+      y: 250
       width: 600
       height: 100
-    actionType: 0
+    actionType: 3
     targetPageAsset: {fileID: 0}
     textColor: {r: 1, g: 1, b: 1, a: 1}
     fontSize: 35
@@ -57,10 +57,10 @@ MonoBehaviour:
     buttonRect:
       serializedVersion: 2
       x: 660
-      y: 450
+      y: 380
       width: 600
       height: 100
-    actionType: 0
+    actionType: 3
     targetPageAsset: {fileID: 0}
     textColor: {r: 1, g: 1, b: 1, a: 1}
     fontSize: 35
@@ -72,12 +72,42 @@ MonoBehaviour:
     buttonRect:
       serializedVersion: 2
       x: 660
-      y: 600
+      y: 510
       width: 600
       height: 100
-    actionType: 0
+    actionType: 3
     targetPageAsset: {fileID: 0}
     textColor: {r: 1, g: 1, b: 1, a: 1}
+    fontSize: 35
+    fontStyle: 0
+    fontAsset: {fileID: 0}
+  - buttonName: LogoutButton
+    buttonImage: {fileID: 0}
+    buttonText: LOGOUT
+    buttonRect:
+      serializedVersion: 2
+      x: 660
+      y: 640
+      width: 600
+      height: 100
+    actionType: 3
+    targetPageAsset: {fileID: 0}
+    textColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    fontSize: 35
+    fontStyle: 0
+    fontAsset: {fileID: 0}
+  - buttonName: QuitButton
+    buttonImage: {fileID: 0}
+    buttonText: QUIT GAME
+    buttonRect:
+      serializedVersion: 2
+      x: 660
+      y: 770
+      width: 600
+      height: 100
+    actionType: 3
+    targetPageAsset: {fileID: 0}
+    textColor: {r: 1, g: 0.4, b: 0.4, a: 1}
     fontSize: 35
     fontStyle: 0
     fontAsset: {fileID: 0}

@@ -12,12 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d77d7b5141ebcd438072a4f8d3d2438, type: 3}
   m_Name: Tower0030
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.TowerData
-  towerId: 
-  towerName: 
-  attackAttribute: 0
-  attackType: 0
-  targetType: 2
-  upgradeTiers: []
+  towerId: Tower0030
+  towerName: Lightning
+  attackAttribute: 3
+  attackType: 2
+  targetType: 0
+  upgradeTiers:
+  - tierLevel: 0
+    buildOrUpgradeCost: 150
+    range: 2
+    damage: 10
+    attackSpeed: 0.5
+    projectileSpeed: 10
+    sellPrice: 120
+    manaCost: 0
+    projectileSprite: {fileID: 0}
+    projectileAnim: {fileID: 0}
   assets:
     idleSprite: {fileID: 0}
     attackSprite: {fileID: 0}
@@ -33,8 +43,8 @@ MonoBehaviour:
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
     animatorController: {fileID: 0}
-    prefab: {fileID: 0}
-    projectilePrefab: {fileID: 0}
+    prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
+    projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
     hitEffectPrefab: {fileID: 0}
     visualScale: 1
-    projectileScale: 0.5
+    projectileScale: 1

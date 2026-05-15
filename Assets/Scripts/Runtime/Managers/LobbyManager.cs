@@ -36,22 +36,184 @@ namespace TDF.Runtime.Managers
                 GameObject udmObj = new GameObject("UserDataManager_AutoSpawned");
                 udmObj.AddComponent<UserDataManager>();
             }
+
+            // UGS 백엔드 매니저 자동 생성
+            if (UnityEngine.Object.FindAnyObjectByType<BackendManager>() == null)
+            {
+                GameObject backendObj = new GameObject("BackendManager_AutoSpawned");
+                backendObj.AddComponent<BackendManager>();
+            }
+
+            // UGS 경제 매니저 자동 생성
+            if (UnityEngine.Object.FindAnyObjectByType<EconomyManager>() == null)
+            {
+                GameObject economyObj = new GameObject("EconomyManager_AutoSpawned");
+                economyObj.AddComponent<EconomyManager>();
+            }
         }
 
-        private void Start()
+        private async void Start()
         {
-            // 만약 씬에 LobbyUIBinder가 존재하고 유효하다면, 구형 프리팹을 스폰하지 않고 바인더의 UI를 메인으로 삼습니다.
             var binder = UnityEngine.Object.FindAnyObjectByType<TDF.Runtime.UI.LobbyUIBinder>();
             if (binder != null && binder.uiData != null && binder.uiRoot != null)
             {
                 pageInstances[PageType.Main] = binder.uiRoot.gameObject;
-                currentPage = PageType.Main;
+                binder.uiRoot.gameObject.SetActive(false);
             }
-            // 그 외의 경우 기존 방식대로 메인 페이지 열기
-            else if (!pageInstances.ContainsKey(PageType.Main))
+
+            CreateSystemPages();
+
+            if (BackendManager.Instance != null)
             {
-                OpenPage(PageType.Main);
+                // 백엔드 매니저가 방금 생성되어 초기화 중일 수 있으므로 대기합니다.
+                await BackendManager.Instance.WaitUntilInitializedAsync();
+                
+                // 만약 일시적인 네트워크 문제나 씬 전환 중 세션이 풀렸다면 복구를 시도합니다.
+                bool isSigned = BackendManager.Instance.IsSignedIn;
+                if (!isSigned)
+                {
+                    isSigned = await BackendManager.Instance.TrySignInCachedUserAsync();
+                }
+
+                if (isSigned)
+                {
+                    // 이미 로그인 된 상태라면 현재 씬이 메인 로비일 때만 Main 페이지를 엽니다.
+                    string sceneName = SceneManager.GetActiveScene().name;
+                    if (sceneName == "Main" || sceneName == "Lobby")
+                    {
+                        OpenPage(PageType.Main);
+                    }
+                    return;
+                }
             }
+            
+            // 로그인되어 있지 않다면 Login 페이지를 엽니다.
+            OpenPage(PageType.Login);
+        }
+
+        private void CreateSystemPages()
+        {
+            // Login Page
+            if (!pageInstances.ContainsKey(PageType.Login))
+            {
+                GameObject loginObj = new GameObject("LoginPage", typeof(RectTransform));
+                loginObj.transform.SetParent(uiRoot, false);
+                var rt = loginObj.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+                var bg = new GameObject("Background", typeof(RectTransform), typeof(Image));
+                bg.transform.SetParent(loginObj.transform, false);
+                var bgRt = bg.GetComponent<RectTransform>();
+                bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+                bg.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.15f, 1f);
+
+                var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+                title.transform.SetParent(loginObj.transform, false);
+                var titleRt = title.GetComponent<RectTransform>();
+                titleRt.anchorMin = new Vector2(0.5f, 0.7f); titleRt.anchorMax = new Vector2(0.5f, 0.7f);
+                titleRt.sizeDelta = new Vector2(800, 200);
+                titleRt.anchoredPosition = Vector2.zero;
+                var titleTxt = title.GetComponent<Text>();
+                titleTxt.text = "TOWER DEFENSE";
+                titleTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                titleTxt.fontSize = 80;
+                titleTxt.alignment = TextAnchor.MiddleCenter;
+                titleTxt.color = Color.white;
+
+                // Helper to create buttons
+                void CreateLoginBtn(string name, string text, float yOffset, Color col, UnityEngine.Events.UnityAction action)
+                {
+                    var btnObj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+                    btnObj.transform.SetParent(loginObj.transform, false);
+                    var btnRt = btnObj.GetComponent<RectTransform>();
+                    btnRt.anchorMin = new Vector2(0.5f, 0.5f); btnRt.anchorMax = new Vector2(0.5f, 0.5f);
+                    btnRt.sizeDelta = new Vector2(500, 80);
+                    btnRt.anchoredPosition = new Vector2(0, yOffset);
+                    btnObj.GetComponent<Image>().color = col;
+                    
+                    var btnTxtObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
+                    btnTxtObj.transform.SetParent(btnObj.transform, false);
+                    var btnTxtRt = btnTxtObj.GetComponent<RectTransform>();
+                    btnTxtRt.anchorMin = Vector2.zero; btnTxtRt.anchorMax = Vector2.one;
+                    btnTxtRt.offsetMin = Vector2.zero; btnTxtRt.offsetMax = Vector2.zero;
+                    var btnTxt = btnTxtObj.GetComponent<Text>();
+                    btnTxt.text = text;
+                    btnTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                    btnTxt.fontSize = 35;
+                    btnTxt.alignment = TextAnchor.MiddleCenter;
+                    btnTxt.color = Color.white;
+
+                    btnObj.GetComponent<Button>().onClick.AddListener(action);
+                }
+
+                CreateLoginBtn("UnityAccountBtn", "Sign in with Unity / Google", 20f, new Color(0.1f, 0.6f, 0.4f, 1f), OnUnityPlayerAccountLoginClicked);
+                CreateLoginBtn("GuestBtn", "Guest Login", -80f, new Color(0.4f, 0.4f, 0.4f, 1f), OnLoginClicked);
+
+                pageInstances[PageType.Login] = loginObj;
+                loginObj.SetActive(false);
+            }
+
+            // Loading Page
+            if (!pageInstances.ContainsKey(PageType.Loading))
+            {
+                GameObject loadingObj = new GameObject("LoadingPage", typeof(RectTransform));
+                loadingObj.transform.SetParent(uiRoot, false);
+                var rt = loadingObj.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+                var bg = new GameObject("Background", typeof(RectTransform), typeof(Image));
+                bg.transform.SetParent(loadingObj.transform, false);
+                var bgRt = bg.GetComponent<RectTransform>();
+                bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+                bg.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.9f);
+
+                var txtObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
+                txtObj.transform.SetParent(loadingObj.transform, false);
+                var txtRt = txtObj.GetComponent<RectTransform>();
+                txtRt.anchorMin = new Vector2(0.5f, 0.5f); txtRt.anchorMax = new Vector2(0.5f, 0.5f);
+                txtRt.sizeDelta = new Vector2(600, 100);
+                txtRt.anchoredPosition = Vector2.zero;
+                var txt = txtObj.GetComponent<Text>();
+                txt.text = "Loading Server Data...";
+                txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                txt.fontSize = 50;
+                txt.alignment = TextAnchor.MiddleCenter;
+                txt.color = Color.white;
+
+                pageInstances[PageType.Loading] = loadingObj;
+                loadingObj.SetActive(false);
+            }
+        }
+
+        private async void OnLoginClicked()
+        {
+            OpenPage(PageType.Loading);
+            
+            if (BackendManager.Instance != null)
+            {
+                await BackendManager.Instance.SignInAnonymouslyAsync();
+                await Awaitable.WaitForSecondsAsync(1.5f); // 로딩 연출 및 서버 동기화 시간
+            }
+
+            OpenPage(PageType.Main);
+        }
+
+        private async void OnUnityPlayerAccountLoginClicked()
+        {
+            Debug.Log("[LobbyManager] Unity Player Account Login Clicked.");
+            OpenPage(PageType.Loading);
+            
+            if (BackendManager.Instance != null)
+            {
+                await BackendManager.Instance.SignInWithUnityPlayerAccountAsync();
+                await Awaitable.WaitForSecondsAsync(1.5f);
+            }
+            
+            OpenPage(PageType.Main);
         }
 
         public void RegisterMainPage(GameObject mainPageObj)
@@ -62,11 +224,35 @@ namespace TDF.Runtime.Managers
 
         public void OpenPage(PageType type)
         {
-            // 팝업이 아닌 경우 기존 페이지 숨기기
-            PageData data = allPages.Find(p => p.pageType == type);
-            if (data == null) return;
+            Debug.Log($"[LobbyManager] OpenPage requested: {type}");
 
-            if (!data.isPopup)
+            PageData data = allPages != null ? allPages.Find(p => p.pageType == type) : null;
+            
+            // 프리팹이나 레이아웃 에셋이 전혀 없는 상태인지 확인 (데이터는 있지만 알맹이가 없는 경우)
+            bool hasNoContent = data == null || (data.visualLayout == null && data.uiPrefab == null);
+
+            // 시스템 전용 페이지(동적 생성)이거나 이미 인스턴스가 존재하면 예외
+            if (hasNoContent && type != PageType.Login && type != PageType.Loading && !pageInstances.ContainsKey(type))
+            {
+                // Fallback: 표시할 UI가 전혀 없으면 해당 씬(Lobby_XXX)으로 직접 전환을 시도합니다. (레거시/서브씬 호환)
+                string targetScene = "Main";
+                if (type == PageType.StageSelect) targetScene = "Lobby_Stage";
+                else if (type == PageType.Shop) targetScene = "Lobby_Shop";
+                else if (type == PageType.Achievement) targetScene = "Lobby_Achievement";
+                else if (type == PageType.Leaderboard) targetScene = "Lobby_Leaderboard";
+                else if (type == PageType.Event) targetScene = "Lobby_Event";
+
+                Debug.Log($"[LobbyManager] No UI content for {type}. Fallback to scene: {targetScene}");
+
+                if (targetScene != "Main")
+                {
+                    SceneManager.LoadScene(targetScene);
+                }
+                return;
+            }
+
+            // 모든 페이지 숨기기 (단, data.isPopup == true 인 경우는 예외)
+            if (data == null || !data.isPopup)
             {
                 foreach (var kvp in pageInstances)
                 {
@@ -95,7 +281,8 @@ namespace TDF.Runtime.Managers
                     dynamicBinder.ApplyUI();
 
                     pageInstances[type] = pageRoot;
-                    // Note: SetupButtonEvents is not called here because LobbyUIBinder handles its own button clicks via ActionType
+                    // Custom 액션 타입 버튼들(로그아웃 등) 처리를 위해 SetupButtonEvents 호출
+                    SetupButtonEvents(type, pageRoot);
                 }
                 else if (data.uiPrefab != null)
                 {
@@ -127,6 +314,28 @@ namespace TDF.Runtime.Managers
             
             // 모든 페이지의 CloseButton 연결
             BindButton(pageObj, "CloseButton", () => CloseCurrentPage(pageObj));
+
+            // 옵션 페이지 특수 버튼 연결
+            if (type == PageType.GameOption)
+            {
+                BindButton(pageObj, "LogoutButton", () => 
+                {
+                    if (BackendManager.Instance != null)
+                    {
+                        BackendManager.Instance.SignOut();
+                    }
+                    OpenPage(PageType.Login);
+                });
+
+                BindButton(pageObj, "QuitButton", () => 
+                {
+#if UNITY_EDITOR
+                    UnityEditor.EditorApplication.isPlaying = false;
+#else
+                    Application.Quit();
+#endif
+                });
+            }
         }
 
         private void BindButton(GameObject root, string btnName, UnityEngine.Events.UnityAction action)
@@ -136,7 +345,7 @@ namespace TDF.Runtime.Managers
             Button[] allButtons = root.GetComponentsInChildren<Button>(true);
             foreach (var b in allButtons)
             {
-                if (b.name == btnName)
+                if (b.name == btnName || b.name == $"Btn_{btnName}")
                 {
                     foundBtn = b;
                     break;

@@ -41,6 +41,7 @@ namespace TDF.Runtime.Entities
         }
 
         private float currentHealth;
+        private float displayedHealth;
         private List<Vector2> waypoints;
         private int currentWaypointIndex;
         private bool isProcessed = false; // 중복 처리 방지 플래그
@@ -110,6 +111,7 @@ namespace TDF.Runtime.Entities
             if (data != null && data.stats != null)
             {
                 currentHealth = data.stats.health;
+                displayedHealth = currentHealth;
             }
 
             if (data != null && data.assets != null)
@@ -150,6 +152,12 @@ namespace TDF.Runtime.Entities
                     animator.runtimeAnimatorController = data.assets.animatorController;
                 }
             }
+
+            // 클릭을 위한 콜라이더 추가
+            var col = GetComponent<BoxCollider2D>();
+            if (col == null) col = gameObject.AddComponent<BoxCollider2D>();
+            col.isTrigger = true;
+            col.size = Vector2.one;
 
             UpdateSortingOrder();
 
@@ -218,6 +226,54 @@ namespace TDF.Runtime.Entities
             hpBarFg.SetActive(true);
 
             statusEffects.ResetEffects();
+        }
+
+        public void RecalculatePath()
+        {
+            if (data == null || data.flyType == MonsterFlyType.Air) return;
+            
+            Vector3 worldPos = transform.position;
+            float worldOffsetX = Map.MapController.Instance.offsetX;
+            float worldOffsetY = Map.MapController.Instance.offsetY;
+            int gx = Mathf.RoundToInt((worldPos.x - worldOffsetX) / Map.MapController.TILE_SIZE);
+            int gy = Mathf.RoundToInt((worldPos.y - worldOffsetY) / Map.MapController.TILE_SIZE);
+            
+            // 현재 진행 방향 계산 (웨이포인트가 있으면)
+            Vector2Int dirHint = Vector2Int.zero;
+            if (waypoints != null && currentWaypointIndex < waypoints.Count)
+            {
+                Vector2 moveDir = (waypoints[currentWaypointIndex] - (Vector2)transform.position).normalized;
+                if (Mathf.Abs(moveDir.x) > Mathf.Abs(moveDir.y)) dirHint = new Vector2Int(moveDir.x > 0 ? 1 : -1, 0);
+                else dirHint = new Vector2Int(0, moveDir.y > 0 ? 1 : -1);
+            }
+
+            var newPath = Map.MapController.Instance.GetPath(-1, new Vector2Int(gx, gy), dirHint);
+            if (newPath != null && newPath.Count > 0)
+            {
+                waypoints = newPath;
+                
+                // 이미 현재 타일 중심을 지나 다음 타일로 향하고 있는 경우, 첫 번째 웨이포인트를 건너뜀
+                if (newPath.Count > 1)
+                {
+                    Vector2 toFirst = (newPath[0] - (Vector2)transform.position).normalized;
+                    Vector2 toSecond = (newPath[1] - (Vector2)transform.position).normalized;
+                    
+                    // 첫 번째 웨이포인트와 두 번째 웨이포인트가 서로 반대 방향에 있다면 (즉, 이미 그 사이 어딘가에 있다면)
+                    if (Vector2.Dot(toFirst, toSecond) < -0.5f || Vector2.Distance(transform.position, newPath[0]) < 0.3f)
+                    {
+                        currentWaypointIndex = 1;
+                    }
+                    else
+                    {
+                        currentWaypointIndex = 0;
+                    }
+                }
+                else
+                {
+                    currentWaypointIndex = 0;
+                }
+                // Debug.Log($"[MonsterController] Path updated for {gameObject.name}. New target: {waypoints[currentWaypointIndex]}");
+            }
         }
 
         private void Update()
@@ -294,8 +350,9 @@ namespace TDF.Runtime.Entities
                 hpBarBg.transform.position = new Vector3(transform.position.x - 0.4f, topY + 0.1f, 0f);
                 hpBarBg.transform.localScale = new Vector3(invScale * 0.8f, invScale * 0.1f, 1f);
 
-                // 체력 비율 반영
-                float hpPercent = Mathf.Clamp01(currentHealth / data.stats.health);
+                // 체력 비율 반영 (연속적인 부드러운 감소)
+                displayedHealth = Mathf.Lerp(displayedHealth, currentHealth, Time.deltaTime * 10f);
+                float hpPercent = Mathf.Clamp01(displayedHealth / data.stats.health);
                 hpBarFg.transform.localScale = new Vector3(hpPercent, 1f, 1f);
 
                 // 남은 체력에 따른 색상 변화
@@ -316,8 +373,14 @@ namespace TDF.Runtime.Entities
         {
             int baseOrder = 1000 - Mathf.RoundToInt(transform.position.y * 100f) - Mathf.RoundToInt(transform.position.x * 10f);
             
-            // 프리팹 내부에 있는 모든 SpriteRenderer를 찾아 레이어 오더를 갱신 (자식 객체에 스프라이트가 있는 경우 방지)
-            var allRenderers = GetComponentsInChildren<SpriteRenderer>();
+            // 공중 유닛은 항상 최상단에 보이도록 오프셋 추가
+            if (data != null && data.flyType == MonsterFlyType.Air)
+            {
+                baseOrder += 2000;
+            }
+
+            // 프리팹 내부에 있는 모든 SpriteRenderer를 찾아 레이어 오더를 갱신
+            var allRenderers = GetComponentsInChildren<SpriteRenderer>(true);
             foreach (var sr in allRenderers)
             {
                 if (sr.gameObject.name == "Shadow") continue;
@@ -331,6 +394,10 @@ namespace TDF.Runtime.Entities
                 var shadowSr = shadowObj.GetComponent<SpriteRenderer>();
                 if (shadowSr != null) shadowSr.sortingOrder = baseOrder - 1;
             }
+
+            // 체력바도 캐릭터와 맞게 소팅오더 재조정
+            if (hpBarBgSr != null) hpBarBgSr.sortingOrder = baseOrder + 10;
+            if (hpBarFgSr != null) hpBarFgSr.sortingOrder = baseOrder + 11;
         }
 
         private void Move()
@@ -347,18 +414,14 @@ namespace TDF.Runtime.Entities
                 // 그림자 기준 현재 위치 (현재 고도를 뺀 위치)
                 Vector3 shadowPos = cachedTransform.position - (Vector3.up * currentAltitude);
                 
-                // 그림자가 기지에 1칸 이내로 접근했는지 확인
-                if (Vector2.Distance(shadowPos, basePosition) <= 1.0f)
+                // 마지막 웨이포인트(기지)를 향해 가고 있을 때만 곤두박질(Swoop) 로직 적용
+                bool isLastWaypoint = (currentWaypointIndex == waypoints.Count - 1);
+
+                if (isLastWaypoint && Vector2.Distance(shadowPos, targetPosition) <= 1.0f)
                 {
                     // === 곤두박질(Swoop) 모드 ===
-                    // 그림자는 바닥(basePosition)을 향해 정상 속도로 이동
-                    Vector3 newShadowPos = Vector3.MoveTowards(shadowPos, basePosition, actualSpeed * Time.deltaTime);
-                    
-                    // 남은 거리 비율 계산 (1.0 에서 0.0 으로 감소)
-                    currentAltitude = Vector2.Distance(newShadowPos, basePosition);
-                    
-                    // 이미지는 현재 그림자 위치에서 위로 고도(currentAltitude) 만큼 띄워줌
-                    // 즉, 거리가 1일 때는 1칸 떠있고, 기지에 도착(0)하면 바닥에 완벽히 닿게 됨
+                    Vector3 newShadowPos = Vector3.MoveTowards(shadowPos, targetPosition, actualSpeed * Time.deltaTime);
+                    currentAltitude = Vector2.Distance(newShadowPos, targetPosition);
                     cachedTransform.position = newShadowPos + (Vector3.up * currentAltitude);
 
                     if (currentAltitude < 0.01f)
@@ -369,9 +432,21 @@ namespace TDF.Runtime.Entities
                 }
                 else
                 {
-                    // 평소 이동 (목표지점도 1칸 위)
+                    // 평소 이동 (목표지점보다 1칸 위를 유지하며 비행)
                     currentAltitude = 1.0f;
-                    targetPosition += Vector3.up; 
+                    Vector3 flyTarget = targetPosition + Vector3.up;
+                    cachedTransform.position = Vector3.MoveTowards(cachedTransform.position, flyTarget, actualSpeed * Time.deltaTime);
+
+                    // 목적지 도달 체크
+                    if (Vector3.SqrMagnitude(cachedTransform.position - flyTarget) < 0.01f)
+                    {
+                        currentWaypointIndex++;
+                        if (currentWaypointIndex >= waypoints.Count)
+                        {
+                            ReachBase();
+                        }
+                    }
+                    return;
                 }
             }
 
@@ -459,9 +534,42 @@ namespace TDF.Runtime.Entities
             ReturnToPool();
         }
 
+        public float GetRemainingPathDistance()
+        {
+            if (waypoints == null || currentWaypointIndex >= waypoints.Count) return 0f;
+
+            float distance = Vector3.Distance(transform.position, waypoints[currentWaypointIndex]);
+            for (int i = currentWaypointIndex; i < waypoints.Count - 1; i++)
+            {
+                distance += Vector3.Distance(waypoints[i], waypoints[i + 1]);
+            }
+            return distance;
+        }
+
+        public int GetCurrentWaypointIndex() => currentWaypointIndex;
+        
+        public float GetCurrentSpeed()
+        {
+            if (data == null || data.stats == null || statusEffects == null) return 1f;
+            return data.stats.moveSpeed * statusEffects.CurrentSpeedModifier;
+        }
+
+        public float GetDistanceToCurrentWaypoint()
+        {
+            if (waypoints == null || currentWaypointIndex >= waypoints.Count) return 0f;
+            return Vector3.Distance(transform.position, waypoints[currentWaypointIndex]);
+        }
+
         public MonsterFlyType GetFlyType()
         {
             return data != null ? data.flyType : MonsterFlyType.Ground;
+        }
+
+        public bool IsImmuneTo(AttackAttribute attr)
+        {
+            if (data == null || data.stats == null) return false;
+            if (attr == AttackAttribute.Normal) return false; // Normal attacks never trigger effects anyway
+            return data.stats.immuneAttribute == attr;
         }
 
         private void ReturnToPool()

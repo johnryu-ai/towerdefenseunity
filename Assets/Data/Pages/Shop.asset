@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Shop
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: shop
-  pageType: 3
+  pageType: 4
   uiPrefab: {fileID: 0}
   visualLayout: {fileID: 11400000, guid: 8b6e964b9b6b1794fac2316bbcf2f8cb, type: 2}
   isPopup: 0

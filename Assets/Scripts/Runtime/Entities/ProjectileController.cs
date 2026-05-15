@@ -14,30 +14,25 @@ namespace TDF.Runtime.Entities
         private Vector3 moveDirection;
         private System.Collections.Generic.List<MonsterController> piercedTargets = new System.Collections.Generic.List<MonsterController>();
         private bool isExploding = false;
-        private float maxVisualScale;
+        private float targetScale = 1f;
 
         private MonsterController target;
+        private ObstacleController obstacleTarget;
         private float damage;
         private AttackAttribute attribute;
         private GameObject hitEffectPrefab;
-        private float targetScale = 1f;
-        private float originalTargetScale = 1f;
+        private TargetType targetType;
 
         private Transform cachedTransform;
-        
-        private Animator animator;
-        private float animTime = 0f;
         private AnimationClip currentPlayingClip;
+        private float animTime = 0f;
 
         private void Awake()
         {
             cachedTransform = transform;
-            animator = GetComponent<Animator>();
         }
 
-        private TargetType targetType;
-
-        public void Initialize(AttackType type, TargetType tType, float range, Vector3 towerGroundPos, MonsterController targetMonster, float dmg, AttackAttribute attr, GameObject hitEffect, Sprite projSprite = null, AnimationClip projAnim = null, float projScale = 1f)
+        public void Initialize(AttackType type, TargetType tType, float range, Vector3 towerGroundPos, MonsterController targetMonster, float dmg, AttackAttribute attr, GameObject hitEffect, Sprite projSprite = null, AnimationClip projAnim = null, float projScale = 1f, float projSpeed = 10f)
         {
             attackType = type;
             targetType = tType;
@@ -49,7 +44,7 @@ namespace TDF.Runtime.Entities
             attribute = attr;
             hitEffectPrefab = hitEffect;
             targetScale = projScale;
-            originalTargetScale = projScale;
+            speed = projSpeed;
             
             currentPlayingClip = projAnim;
             animTime = 0f;
@@ -60,56 +55,36 @@ namespace TDF.Runtime.Entities
             if (sr != null)
             {
                 sr.material = new Material(Shader.Find("Sprites/Default"));
-                sr.color = Color.white; // 오브젝트 풀에서 꺼냈을 때 투명도 복구
+                sr.color = Color.white;
                 sr.sortingOrder = 30000;
 
-                if (projSprite != null) {
-                    sr.sprite = projSprite;
-                } else if (projAnim != null) {
-                    projAnim.SampleAnimation(gameObject, 0f); // 첫 프레임 로드
-                }
+                if (projSprite != null) sr.sprite = projSprite;
+                else if (projAnim != null) projAnim.SampleAnimation(gameObject, 0f);
             }
 
-            if (projAnim != null)
+            if (attackType == AttackType.LinePiercing && target != null)
             {
-                if (animator == null) animator = gameObject.AddComponent<Animator>();
-            }
-
-            // 타입별 초기화 로직
-            if (attackType == AttackType.LinePiercing)
-            {
-                if (target != null)
-                {
-                    // 발사 순간의 타겟 '바닥' 방향으로 직선 발사
-                    Vector3 targetGroundPos = target.transform.position;
-                    if (target.GetFlyType() == MonsterFlyType.Air) targetGroundPos -= Vector3.up;
-
-                    moveDirection = (targetGroundPos - transform.position).normalized;
-                    float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
-                    transform.rotation = Quaternion.Euler(0, 0, angle);
-                }
+                Vector3 targetGroundPos = target.transform.position;
+                if (target.GetFlyType() == MonsterFlyType.Air) targetGroundPos -= Vector3.up;
+                moveDirection = (targetGroundPos - transform.position).normalized;
+                float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
+                transform.rotation = Quaternion.Euler(0, 0, angle);
             }
             else if (attackType == AttackType.AreaSelf)
             {
-                // 타워 위치에서 즉시 폭발
                 isExploding = true;
                 ExplodeArea(startPos);
             }
-            else
+            else if (target != null)
             {
-                // Single, AreaProjectile, Multi: 타겟을 향해 유도
-                if (target != null)
-                {
-                    Vector3 dir = (target.transform.position - transform.position).normalized;
-                    float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-                    transform.rotation = Quaternion.Euler(0, 0, angle);
-                }
+                Vector3 dir = (target.transform.position - transform.position).normalized;
+                float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                transform.rotation = Quaternion.Euler(0, 0, angle);
             }
         }
 
         private void Update()
         {
-            // 애니메이션 재생
             if (currentPlayingClip != null)
             {
                 animTime += Time.deltaTime;
@@ -120,18 +95,14 @@ namespace TDF.Runtime.Entities
 
             if (isExploding)
             {
-                // 폭발 이펙트 연출: 폭발 반경의 2배(지름)만큼 커짐
                 targetScale += (explosionRange * 2f - targetScale) * Time.deltaTime * 15f;
                 var sr = GetComponent<SpriteRenderer>();
                 if (sr != null)
                 {
                     Color c = sr.color;
-                    c.a -= Time.deltaTime * 3f; // 투명해지면서 사라짐
+                    c.a -= Time.deltaTime * 3f;
                     sr.color = c;
-                    if (c.a <= 0f)
-                    {
-                        ReturnToPool();
-                    }
+                    if (c.a <= 0f) ReturnToPool();
                 }
                 return;
             }
@@ -139,156 +110,116 @@ namespace TDF.Runtime.Entities
             if (attackType == AttackType.LinePiercing)
             {
                 cachedTransform.position += moveDirection * speed * Time.deltaTime;
-
-                // 관통 충돌 체크
                 for (int i = 0; i < MonsterController.ActiveMonsters.Count; i++)
                 {
                     var monster = MonsterController.ActiveMonsters[i];
                     if (monster != null && monster.gameObject.activeInHierarchy && !piercedTargets.Contains(monster))
                     {
-                        Vector3 monsterPos = monster.transform.position;
-                        if (Vector2.SqrMagnitude(cachedTransform.position - monsterPos) < 0.25f) // 충돌 반경 0.5
+                        if (Vector2.SqrMagnitude(cachedTransform.position - monster.transform.position) < 0.25f)
                         {
                             piercedTargets.Add(monster);
                             ApplyDamageAndEffect(monster);
                         }
                     }
                 }
-
-                // 사거리를 벗어나면 파괴
-                if (Vector2.Distance(startPos, cachedTransform.position) > explosionRange)
-                {
-                    ReturnToPool();
-                }
+                if (Vector2.Distance(startPos, cachedTransform.position) > explosionRange) ReturnToPool();
                 return;
             }
 
-            // 타겟이 이미 죽었거나 사라졌을 때의 처리
-            if (target == null || !target.gameObject.activeInHierarchy)
+            if ((target == null || !target.gameObject.activeInHierarchy) && 
+                (obstacleTarget == null || !obstacleTarget.gameObject.activeInHierarchy))
             {
                 if (attackType == AttackType.AreaProjectile)
                 {
-                    // 공중에서 타겟이 죽었다면 그 자리에서 바로 폭발
                     isExploding = true;
                     ExplodeArea(cachedTransform.position);
                 }
                 else if (attackType == AttackType.Multi)
                 {
-                    // Multi 타입 역시 죽은 자리에서 겹친 적들 타격
-                    float multiRangeSqr = 0.5f * 0.5f;
-                    Vector3 impactCenter = cachedTransform.position;
-                    for (int i = MonsterController.ActiveMonsters.Count - 1; i >= 0; i--)
-                    {
-                        var monster = MonsterController.ActiveMonsters[i];
-                        if (monster != null && monster.gameObject.activeInHierarchy)
-                        {
-                            Vector3 mGround = monster.transform.position;
-                            if (monster.GetFlyType() == MonsterFlyType.Air) mGround -= Vector3.up;
-
-                            if (IsValidTargetType(monster.GetFlyType()))
-                            {
-                                if (Vector2.SqrMagnitude(impactCenter - mGround) <= multiRangeSqr)
-                                {
-                                    ApplyDamageAndEffect(monster);
-                                }
-                            }
-                        }
-                    }
+                    ExplodeAreaAt(cachedTransform.position, 0.5f);
                     ReturnToPool();
                 }
-                else
-                {
-                    ReturnToPool();
-                }
+                else ReturnToPool();
                 return;
             }
 
-            // 타겟을 향해 이동
-            Vector3 dir = (target.transform.position - cachedTransform.position).normalized;
+            Vector3 targetWorldPos = target != null ? target.transform.position : obstacleTarget.transform.position;
+            Vector3 dir = (targetWorldPos - cachedTransform.position).normalized;
             cachedTransform.position += dir * speed * Time.deltaTime;
             float currentAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
             cachedTransform.rotation = Quaternion.Euler(0, 0, currentAngle);
 
-            // 타겟 명중 체크
-            if (Vector2.SqrMagnitude(cachedTransform.position - target.transform.position) < 0.1f)
+            if (Vector2.SqrMagnitude(cachedTransform.position - targetWorldPos) < 0.1f)
             {
                 if (attackType == AttackType.AreaProjectile)
                 {
                     isExploding = true;
-                    // 폭발 기준점은 타겟의 바닥 위치로 함
-                    Vector3 explodeCenter = target.transform.position;
-                    if (target.GetFlyType() == MonsterFlyType.Air) explodeCenter -= Vector3.up;
-
+                    Vector3 explodeCenter = targetWorldPos;
+                    if (target != null && target.GetFlyType() == MonsterFlyType.Air) explodeCenter -= Vector3.up;
                     ExplodeArea(explodeCenter);
                 }
                 else if (attackType == AttackType.Multi)
                 {
-                    // Multi: 타겟 위치 반경 0.5f(조금이라도 겹친) 내의 모든 적 타격
-                    Vector3 impactCenter = target.transform.position;
-                    if (target.GetFlyType() == MonsterFlyType.Air) impactCenter -= Vector3.up;
-                    
-                    float multiRangeSqr = 0.5f * 0.5f;
-                    // 리스트 원소가 제거될 수 있으므로 역순 순회
-                    for (int i = MonsterController.ActiveMonsters.Count - 1; i >= 0; i--)
-                    {
-                        var monster = MonsterController.ActiveMonsters[i];
-                        if (monster != null && monster.gameObject.activeInHierarchy)
-                        {
-                            Vector3 mGround = monster.transform.position;
-                            if (monster.GetFlyType() == MonsterFlyType.Air) mGround -= Vector3.up;
-
-                            if (IsValidTargetType(monster.GetFlyType()))
-                            {
-                                if (Vector2.SqrMagnitude(impactCenter - mGround) <= multiRangeSqr)
-                                {
-                                    ApplyDamageAndEffect(monster);
-                                }
-                            }
-                        }
-                    }
+                    Vector3 impactCenter = targetWorldPos;
+                    if (target != null && target.GetFlyType() == MonsterFlyType.Air) impactCenter -= Vector3.up;
+                    ExplodeAreaAt(impactCenter, 0.5f);
                     ReturnToPool();
                 }
-                else // Single
+                else
                 {
-                    ApplyDamageAndEffect(target);
+                    if (target != null) ApplyDamageAndEffect(target);
+                    else if (obstacleTarget != null) obstacleTarget.TakeDamage(damage);
                     ReturnToPool();
                 }
             }
+        }
+
+        public void SetObstacleTarget(ObstacleController obs)
+        {
+            obstacleTarget = obs;
         }
 
         private void LateUpdate()
         {
             var sr = GetComponent<SpriteRenderer>();
-            if (sr != null && sr.sprite != null)
+            if (sr == null) { transform.localScale = Vector3.one * targetScale; return; }
+            if (sr.sprite != null)
             {
                 float maxBound = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y);
-                if (maxBound > 0.001f)
-                {
-                    float currentScale = targetScale / maxBound;
-                    transform.localScale = Vector3.one * currentScale;
-                }
+                if (maxBound > 0.001f) transform.localScale = Vector3.one * (targetScale / maxBound);
+                else transform.localScale = Vector3.one * targetScale;
             }
+            else transform.localScale = Vector3.one * targetScale;
         }
 
         private void ExplodeArea(Vector3 center)
         {
-            float sqrRange = explosionRange * explosionRange;
-            // 리스트 원소가 제거되더라도 스킵되지 않도록 역순 순회
+            ExplodeAreaAt(center, explosionRange);
+        }
+
+        private void ExplodeAreaAt(Vector3 center, float range)
+        {
+            float sqrRange = range * range;
             for (int i = MonsterController.ActiveMonsters.Count - 1; i >= 0; i--)
             {
                 var monster = MonsterController.ActiveMonsters[i];
                 if (monster != null && monster.gameObject.activeInHierarchy)
                 {
-                    // 몬스터 바닥 좌표 기준 검사
-                    Vector3 monsterGroundPos = monster.transform.position;
-                    if (monster.GetFlyType() == MonsterFlyType.Air) monsterGroundPos -= Vector3.up;
+                    if (!IsValidTargetType(monster.GetFlyType())) continue;
+                    Vector3 mGround = monster.transform.position;
+                    if (monster.GetFlyType() == MonsterFlyType.Air) mGround -= Vector3.up;
+                    if (Vector2.SqrMagnitude(center - mGround) <= sqrRange) ApplyDamageAndEffect(monster);
+                }
+            }
 
-                    if (IsValidTargetType(monster.GetFlyType()))
+            // 장애물 범위 타격 추가
+            foreach (var obs in ObstacleController.ActiveObstacles)
+            {
+                if (obs != null && obs.gameObject.activeInHierarchy)
+                {
+                    if (Vector2.SqrMagnitude(center - obs.transform.position) <= sqrRange)
                     {
-                        if (Vector2.SqrMagnitude(center - monsterGroundPos) <= sqrRange)
-                        {
-                            ApplyDamageAndEffect(monster);
-                        }
+                        obs.TakeDamage(damage);
                     }
                 }
             }
@@ -298,27 +229,28 @@ namespace TDF.Runtime.Entities
         {
             targetMonster.TakeDamage(damage);
             
-            var status = targetMonster.GetComponent<StatusEffectManager>();
-            if (status != null)
+            // 면역 상태 확인: 면역이 아닐 때만 효과(Slow, Burn, Stun) 적용
+            if (!targetMonster.IsImmuneTo(attribute))
             {
-                switch (attribute)
+                var status = targetMonster.GetComponent<StatusEffectManager>();
+                if (status != null)
                 {
-                    case AttackAttribute.Cold:
-                        status.ApplySlow(2f, 0.4f);
-                        break;
-                    case AttackAttribute.Fire:
-                        status.ApplyBurn(3f, damage * 0.2f);
-                        break;
-                    case AttackAttribute.Electric:
-                        status.ApplyStun(0.5f);
-                        break;
+                    var settings = AttackAttributeSettings.Instance;
+                    switch (attribute)
+                    {
+                        case AttackAttribute.Cold:
+                            status.ApplySlow(settings.iceDuration, settings.iceSlowMultiplier);
+                            break;
+                        case AttackAttribute.Fire:
+                            status.ApplyBurn(settings.fireDuration, damage * settings.fireBurnDamageRatio);
+                            break;
+                        case AttackAttribute.Electric:
+                            status.ApplyStun(settings.lightningStunDuration);
+                            break;
+                    }
                 }
             }
-
-            if (hitEffectPrefab != null)
-            {
-                ObjectPoolManager.Instance.SpawnFromPool(hitEffectPrefab, targetMonster.transform.position, Quaternion.identity);
-            }
+            if (hitEffectPrefab != null) ObjectPoolManager.Instance.SpawnFromPool(hitEffectPrefab, targetMonster.transform.position, Quaternion.identity);
         }
 
         private bool IsValidTargetType(MonsterFlyType flyType)

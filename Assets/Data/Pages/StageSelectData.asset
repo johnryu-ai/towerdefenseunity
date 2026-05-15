@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: StageSelectData
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.PageData
   pageId: stageselect
-  pageType: 2
+  pageType: 3
   uiPrefab: {fileID: 102139749747464958, guid: 157725529a66ef247bacbe8a5a6d7a0e, type: 3}
   visualLayout: {fileID: 11400000, guid: 3491845457215f349a13ad0b809bd924, type: 2}
   isPopup: 0

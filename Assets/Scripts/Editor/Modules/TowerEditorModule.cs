@@ -102,6 +102,10 @@ namespace TDF.Editor.Modules
 
                 GUILayout.BeginHorizontal();
                 tier.attackSpeed = EditorGUILayout.FloatField("Atk Speed", tier.attackSpeed);
+                tier.projectileSpeed = EditorGUILayout.FloatField("Proj Speed", tier.projectileSpeed);
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
                 tier.manaCost = EditorGUILayout.FloatField("Mana Cost", tier.manaCost);
                 GUILayout.EndHorizontal();
 

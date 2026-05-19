@@ -35,11 +35,14 @@ namespace TDF.Runtime.UI
             }
         }
 
+        // ── 동적 스테이지 선택용 상태 ──
+        private int selectedWorldIdx = -1; // -1이면 World 선택 화면, 그 이상이면 해당 World의 Stage 선택 화면
+
         private void OnEnable()
         {
+            selectedWorldIdx = -1; // 진입 시 항상 World 화면으로 초기화
             if (uiRoot != null && uiData != null)
             {
-                // UI가 다시 활성화될 때마다 최신 런타임 데이터 반영
                 ApplyUI();
             }
         }
@@ -67,7 +70,7 @@ namespace TDF.Runtime.UI
             {
                 backgroundObj = new GameObject("Background_Generated", typeof(RectTransform), typeof(Image));
                 backgroundObj.transform.SetParent(uiRoot, false);
-                backgroundObj.transform.SetAsFirstSibling(); // Put it behind everything
+                backgroundObj.transform.SetAsFirstSibling();
                 
                 RectTransform rt = backgroundObj.GetComponent<RectTransform>();
                 rt.anchorMin = Vector2.zero;
@@ -78,7 +81,7 @@ namespace TDF.Runtime.UI
                 Image img = backgroundObj.GetComponent<Image>();
                 img.sprite = uiData.backgroundImage;
                 img.type = Image.Type.Simple;
-                img.preserveAspect = false; // Usually stretch for background
+                img.preserveAspect = false;
             }
 
             // 2. Create Top Banner
@@ -101,9 +104,11 @@ namespace TDF.Runtime.UI
 
                 // [Dynamic Reordering for Achievements]
                 bool isAchievementPage = false;
+                bool isStagePage = false;
                 foreach (var b in uiData.buttons)
                 {
                     if (b.buttonName.StartsWith("Achieve_")) isAchievementPage = true;
+                    if (b.buttonName.StartsWith("World_") || b.buttonName.StartsWith("Stage_")) isStagePage = true;
                 }
 
                 if (isAchievementPage && UserDataManager.Instance != null)
@@ -115,12 +120,11 @@ namespace TDF.Runtime.UI
                     {
                         if (b.buttonName.StartsWith("Achieve_"))
                         {
-                            string id = b.buttonName.Split('_')[1]; // Achieve_ID_...
+                            string id = b.buttonName.Split('_')[1];
                             achIds.Add(id);
                         }
                     }
 
-                    // Extract unique Y positions used by these elements
                     foreach (var b in uiData.buttons)
                     {
                         if (b.buttonName.EndsWith("_Title"))
@@ -128,9 +132,8 @@ namespace TDF.Runtime.UI
                             if (!yPositions.Contains(b.buttonRect.y)) yPositions.Add(b.buttonRect.y);
                         }
                     }
-                    yPositions.Sort(); // Ascending (Top to Bottom)
+                    yPositions.Sort();
 
-                    // Sort IDs: Unclaimed first, Claimed last
                     List<string> sortedIds = new List<string>(achIds);
                     sortedIds.Sort((a, b) => {
                         var progA = UserDataManager.Instance.GetAchievementProgress(a);
@@ -139,10 +142,9 @@ namespace TDF.Runtime.UI
                         bool claimedB = progB != null && progB.completed && progB.rewardClaimed;
                         
                         if (claimedA == claimedB) return a.CompareTo(b);
-                        return claimedA ? 1 : -1; // claimed goes to bottom
+                        return claimedA ? 1 : -1;
                     });
 
-                    // Clone and reassign Y positions
                     foreach (var b in uiData.buttons)
                     {
                         LobbyButtonData clone = new LobbyButtonData();
@@ -171,7 +173,22 @@ namespace TDF.Runtime.UI
                 }
                 else
                 {
-                    buttonsToProcess.AddRange(uiData.buttons);
+                    foreach (var b in uiData.buttons)
+                    {
+                        // 2단계 스테이지 구성에 따른 버튼 필터링
+                        if (isStagePage)
+                        {
+                            if (selectedWorldIdx == -1) // World 화면
+                            {
+                                if (b.buttonName.StartsWith("Stage_") || b.buttonName == "StageBackButton") continue; // 숨김
+                            }
+                            else // Stage 화면
+                            {
+                                if (b.buttonName.StartsWith("World_")) continue; // 숨김
+                            }
+                        }
+                        buttonsToProcess.Add(b);
+                    }
                 }
 
                 foreach (var btnData in buttonsToProcess)
@@ -184,28 +201,20 @@ namespace TDF.Runtime.UI
                     
                     Image img = btnObj.GetComponent<Image>();
                     if (btnData.buttonImage != null)
-                    {
                         img.sprite = btnData.buttonImage;
-                    }
                     else
-                    {
-                        // Default transparent or solid color if no image
                         img.color = new Color(1, 1, 1, 0.5f);
-                    }
                     
                     Button btn = btnObj.GetComponent<Button>();
                     
-                    // Setup Text
                     if (!string.IsNullOrEmpty(btnData.buttonText))
                     {
                         GameObject textObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
                         textObj.transform.SetParent(btnObj.transform, false);
                         
                         RectTransform txtRt = textObj.GetComponent<RectTransform>();
-                        txtRt.anchorMin = Vector2.zero;
-                        txtRt.anchorMax = Vector2.one;
-                        txtRt.offsetMin = Vector2.zero;
-                        txtRt.offsetMax = Vector2.zero;
+                        txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one;
+                        txtRt.offsetMin = Vector2.zero; txtRt.offsetMax = Vector2.zero;
                         
                         Text txt = textObj.GetComponent<Text>();
                         txt.text = btnData.buttonText;
@@ -215,32 +224,30 @@ namespace TDF.Runtime.UI
                         txt.fontStyle = btnData.fontStyle;
                         
                         if (btnData.fontAsset != null)
-                        {
                             txt.font = btnData.fontAsset;
-                        }
                         else
-                        {
-                            Font defaultFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                            if (defaultFont == null) defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                            txt.font = defaultFont;
-                        }
+                            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                     }
                     
-                    // Bind Click Event
                     btn.onClick.AddListener(() => OnButtonClicked(btnData));
 
-                    // Dynamic Data Binding (Shop, Achievement, Stage, etc.)
                     Text btnTxt = btnObj.GetComponentInChildren<Text>();
                     ProcessDynamicData(btnData, btn, btnTxt, img);
                 }
             }
         }
 
+        private bool IsStageCleared(string stageName)
+        {
+            if (UserDataManager.Instance == null) return false;
+            var r = UserDataManager.Instance.GetMapRecord(stageName);
+            return r != null && r.cleared;
+        }
+
         private void ProcessDynamicData(LobbyButtonData data, Button btn, Text txt, Image img)
         {
             if (UserDataManager.Instance == null) return;
 
-            // 1. 상점 아이템
             if (data.buttonName.StartsWith("ShopItem_"))
             {
                 string itemId = data.buttonName.Replace("ShopItem_", "");
@@ -253,21 +260,16 @@ namespace TDF.Runtime.UI
                 else
                 {
                     btn.onClick.AddListener(() => {
-                        // TODO: 실제 구매 로직 (LobbyUIManager 참조)
                         Debug.Log($"[Shop] Buy item {itemId}");
                     });
                 }
             }
-            // 젬 표시 라벨
             else if (data.buttonName == "GemCountLabel" && txt != null)
             {
                 txt.text = $"💎 GEMS : {UserDataManager.Instance.PlayerGems}";
             }
-
-            // 2. 업적 보상 개별 버튼
             else if (data.buttonName.StartsWith("Achieve_") && data.buttonName.EndsWith("_Claim"))
             {
-                // Name format: Achieve_{ID}_{Gems}_Claim
                 string[] parts = data.buttonName.Split('_');
                 string achId = parts[1];
                 string gems = parts.Length > 3 ? parts[2] : "0";
@@ -302,13 +304,11 @@ namespace TDF.Runtime.UI
                 }
                 else
                 {
-                    // 아직 진행 기록이 없을 때 (In Progress 처리)
                     if (txt != null) txt.text = $"💎 {gems}";
                     btn.interactable = false;
                     img.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
                 }
             }
-            // 2-1. 전체 받기 버튼
             else if (data.buttonName == "AchieveClaimAllButton")
             {
                 btn.onClick.AddListener(() => {
@@ -336,8 +336,6 @@ namespace TDF.Runtime.UI
                     }
                 });
             }
-
-            // 3. 리더보드
             else if (data.buttonName.StartsWith("Rank_") && txt != null)
             {
                 int rankIdx = int.Parse(data.buttonName.Replace("Rank_", ""));
@@ -355,49 +353,144 @@ namespace TDF.Runtime.UI
                     txt.text = $"{rankIdx}. -";
                 }
             }
-
-            // 4. 스테이지
+            // 4. 월드 & 스테이지 (LobbyManager.worlds 기반 2단계 메뉴)
             else if (data.buttonName.StartsWith("World_"))
             {
-                btn.onClick.AddListener(() => {
-                    // 배경 이미지 교체
-                    if (backgroundObj != null)
-                    {
-                        Image bgImg = backgroundObj.GetComponent<Image>();
-                        bgImg.color = new Color(Random.Range(0.2f,0.5f), Random.Range(0.2f,0.5f), Random.Range(0.2f,0.5f));
-                    }
-                });
-            }
-            else if (data.buttonName.StartsWith("Stage_"))
-            {
-                int stageIdx = int.Parse(data.buttonName.Replace("Stage_", ""));
-                int world = (stageIdx - 1) / 10 + 1;
-                int stage = (stageIdx - 1) % 10 + 1;
-                
-                if (txt != null) txt.text = $"Stage {world}-{stage}";
+                int wIdx = int.Parse(data.buttonName.Replace("World_", "")) - 1; // 0-indexed
+                var worlds = LobbyManager.Instance.worlds;
+                bool hasWorld = (worlds != null && wIdx >= 0 && wIdx < worlds.Count && worlds[wIdx] != null);
 
-                var records = UserDataManager.Instance.Data.mapClearRecords;
-                int clearedCount = records != null ? records.Count : 0;
-                
-                // 스테이지가 이미 클리어된 스테이지(stageIdx <= clearedCount) 이거나,
-                // 현재 공략 중인 스테이지(stageIdx == clearedCount + 1) 일 때만 활성화.
-                bool isUnlocked = (stageIdx <= clearedCount + 1);
-
-                if (!isUnlocked)
+                bool isUnlocked = true;
+                if (wIdx > 0 && hasWorld)
                 {
+                    var prevWorld = worlds[wIdx - 1];
+                    if (prevWorld != null && prevWorld.stages.Count > 0)
+                    {
+                        isUnlocked = IsStageCleared(prevWorld.stages[prevWorld.stages.Count - 1].name);
+                    }
+                }
+
+                if (!hasWorld)
+                {
+                    if (txt != null) txt.text = $"World {wIdx + 1}\n(준비 중)";
                     btn.interactable = false;
-                    img.color = Color.gray;
+                    img.color = new Color(0.2f, 0.2f, 0.2f);
+                }
+                else if (!isUnlocked)
+                {
+                    if (txt != null) txt.text = $"World {wIdx + 1}\n(잠김)";
+                    btn.interactable = false;
+                    img.color = new Color(0.15f, 0.15f, 0.2f);
                 }
                 else
                 {
-                    // 클리어된 스테이지면 다른 색상 (초록빛)
-                    if (stageIdx <= clearedCount)
-                        img.color = new Color(0.6f, 1f, 0.6f);
-                        
+                    int cleared = 0;
+                    int total = worlds[wIdx].stages.Count;
+                    for (int i = 0; i < total; i++)
+                    {
+                        if (IsStageCleared(worlds[wIdx].stages[i].name)) cleared++;
+                    }
+
+                    if (txt != null) txt.text = $"World {wIdx + 1}\n({cleared}/{total})";
+                    img.color = cleared == total && total > 0 ? new Color(0.1f, 0.55f, 0.18f) : new Color(0.2f, 0.38f, 0.75f);
+                    
+                    // 현재 플레이해야 할 월드인지 계산 (가장 첫 번째 미클리어 스테이지가 있는 곳)
+                    bool isActiveWorld = false;
+                    for (int i = 0; i < worlds.Count; i++)
+                    {
+                        if (worlds[i] == null) continue;
+                        bool foundUncleared = false;
+                        for (int j = 0; j < worlds[i].stages.Count; j++)
+                        {
+                            if (!IsStageCleared(worlds[i].stages[j].name))
+                            {
+                                if (i == wIdx) isActiveWorld = true;
+                                foundUncleared = true;
+                                break;
+                            }
+                        }
+                        if (foundUncleared) break;
+                    }
+
+                    if (isActiveWorld && txt != null) txt.color = Color.yellow; // 반짝임 효과
+
                     btn.onClick.AddListener(() => {
-                        LobbyManager.Instance.StartGameAt(stageIdx - 1);
+                        selectedWorldIdx = wIdx;
+                        ApplyUI(); // 스테이지 뷰로 갱신
                     });
                 }
+            }
+            else if (data.buttonName.StartsWith("Stage_"))
+            {
+                int sIdx = int.Parse(data.buttonName.Replace("Stage_", "")) - 1; // 0-indexed
+                var worlds = LobbyManager.Instance.worlds;
+                bool hasStage = (selectedWorldIdx >= 0 && selectedWorldIdx < worlds.Count && worlds[selectedWorldIdx] != null && sIdx >= 0 && sIdx < worlds[selectedWorldIdx].stages.Count);
+
+                bool isUnlocked = true;
+                if (sIdx > 0 && hasStage)
+                {
+                    isUnlocked = IsStageCleared(worlds[selectedWorldIdx].stages[sIdx - 1].name);
+                }
+
+                if (!hasStage)
+                {
+                    if (txt != null) txt.text = $"Stage {selectedWorldIdx + 1}-{sIdx + 1}\n(준비 중)";
+                    btn.interactable = false;
+                    img.color = new Color(0.2f, 0.2f, 0.2f);
+                }
+                else if (!isUnlocked)
+                {
+                    if (txt != null) txt.text = $"Stage {selectedWorldIdx + 1}-{sIdx + 1}\n(잠김)";
+                    btn.interactable = false;
+                    img.color = new Color(0.15f, 0.15f, 0.2f);
+                }
+                else
+                {
+                    bool isCleared = IsStageCleared(worlds[selectedWorldIdx].stages[sIdx].name);
+                    
+                    string scoreTxt = "";
+                    var rec = UserDataManager.Instance.GetMapRecord(worlds[selectedWorldIdx].stages[sIdx].name);
+                    if (rec != null && rec.hasBestResult) scoreTxt = $"\n{rec.bestResult.score:N0}점";
+
+                    if (txt != null) txt.text = $"Stage {selectedWorldIdx + 1}-{sIdx + 1}{(isCleared ? " ✓" : "")}{scoreTxt}";
+                    img.color = isCleared ? new Color(0.1f, 0.55f, 0.18f) : new Color(0.2f, 0.38f, 0.75f);
+                    
+                    // 가장 첫 번째 미클리어 스테이지인지 확인
+                    bool isActiveStage = false;
+                    if (!isCleared)
+                    {
+                        isActiveStage = true;
+                        // 나보다 앞선 월드에 미클리어가 있으면 나는 액티브가 아님
+                        for (int i = 0; i <= selectedWorldIdx; i++)
+                        {
+                            if (worlds[i] == null) continue;
+                            for (int j = 0; j < (i == selectedWorldIdx ? sIdx : worlds[i].stages.Count); j++)
+                            {
+                                if (!IsStageCleared(worlds[i].stages[j].name))
+                                {
+                                    isActiveStage = false; break;
+                                }
+                            }
+                            if (!isActiveStage) break;
+                        }
+                    }
+
+                    if (isActiveStage && txt != null) txt.color = Color.yellow; // 반짝임 효과
+
+                    int capturedWIdx = selectedWorldIdx;
+                    int capturedSIdx = sIdx;
+                    btn.onClick.AddListener(() => {
+                        LobbyManager.Instance.StartGameAt(capturedWIdx, capturedSIdx);
+                    });
+                }
+            }
+            else if (data.buttonName == "StageBackButton")
+            {
+                if (txt != null) txt.text = "← 돌아가기";
+                btn.onClick.AddListener(() => {
+                    selectedWorldIdx = -1;
+                    ApplyUI();
+                });
             }
         }
 
@@ -406,6 +499,17 @@ namespace TDF.Runtime.UI
             if (LobbyManager.Instance == null)
             {
                 Debug.LogWarning("[LobbyUIBinder] LobbyManager.Instance is null. Cannot perform action.");
+                return;
+            }
+
+            // 동적으로 특수 기능을 수행하는 버튼들은 기본 액션(OpenPage, ClosePage 등)을 무시합니다.
+            if (data.buttonName.StartsWith("World_") || 
+                data.buttonName.StartsWith("Stage_") || 
+                data.buttonName.StartsWith("Achieve_") ||
+                data.buttonName.StartsWith("ShopItem_") ||
+                data.buttonName == "StageBackButton" ||
+                data.buttonName == "AchieveClaimAllButton")
+            {
                 return;
             }
 

@@ -23,6 +23,7 @@ MonoBehaviour:
     range: 2
     damage: 10
     attackSpeed: 1
+    projectileSpeed: 10
     sellPrice: 320
     manaCost: 0
     projectileSprite: {fileID: 0}

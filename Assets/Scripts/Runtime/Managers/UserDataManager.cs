@@ -46,13 +46,13 @@ namespace TDF.Runtime.Managers
         {
             if (BackendManager.Instance != null)
             {
-                BackendManager.Instance.OnSignInSuccess += LoadFromCloud;
+                BackendManager.Instance.OnSignInSuccess += LoadFromCloudEventWrapper;
                 BackendManager.Instance.OnSignOut += ResetAllData;
                 
                 // 만약 이미 로그인되어 있다면 즉시 로드
                 if (BackendManager.Instance.IsSignedIn)
                 {
-                    LoadFromCloud();
+                    LoadFromCloudEventWrapper();
                 }
             }
         }
@@ -61,7 +61,7 @@ namespace TDF.Runtime.Managers
         {
             if (BackendManager.Instance != null)
             {
-                BackendManager.Instance.OnSignInSuccess -= LoadFromCloud;
+                BackendManager.Instance.OnSignInSuccess -= LoadFromCloudEventWrapper;
                 BackendManager.Instance.OnSignOut -= ResetAllData;
             }
         }
@@ -93,15 +93,60 @@ namespace TDF.Runtime.Managers
             }
         }
 
+        private bool isLoadingFromCloud = false;
+
         /// <summary>서버에서 데이터를 불러온다. 신규 유저의 경우 초기값으로 세팅된다.</summary>
-        public async void LoadFromCloud()
+        public async Awaitable LoadFromCloudAsync()
         {
+            if (isLoadingFromCloud)
+            {
+                // Awaitable은 여러 곳에서 동시에 await 할 수 없는 구조적 한계가 있습니다.
+                // 따라서 이미 로딩 중이라면 끝날 때까지 프레임 단위로 대기합니다.
+                while (isLoadingFromCloud)
+                {
+                    await Awaitable.NextFrameAsync();
+                }
+                return;
+            }
+
+            isLoadingFromCloud = true;
             try
             {
-                if (BackendManager.Instance != null && BackendManager.Instance.IsSignedIn)
+                await InternalLoadFromCloudAsync();
+            }
+            finally
+            {
+                isLoadingFromCloud = false;
+            }
+        }
+
+        private async Awaitable InternalLoadFromCloudAsync()
+        {
+            if (BackendManager.Instance == null || !BackendManager.Instance.IsSignedIn)
+            {
+                Debug.LogWarning("[UserDataManager] 로그인되어 있지 않아 데이터를 불러올 수 없습니다.");
+                if (saveData == null) saveData = new UserSaveData();
+                return;
+            }
+
+            // 마이그레이션 중이라면 데이터베이스 덮어쓰기/읽기 충돌 방지를 위해 끝날 때까지 대기합니다.
+            while (BackendManager.Instance.IsMigrating)
+            {
+                await Awaitable.WaitForSecondsAsync(0.1f);
+            }
+
+            // [중요] 유니티 클라우드(UGS) 권한 전파 지연 이슈 해결
+            // 데이터 로드 전 반드시 1.5초 정도를 대기하여 서버 동기화를 보장합니다.
+            await Awaitable.WaitForSecondsAsync(1.5f);
+
+            Debug.Log("[UserDataManager] 서버에서 진행 데이터를 불러옵니다...");
+            var keys = new HashSet<string> { "UserSaveData" };
+            
+            int maxRetries = 5; // 재시도 횟수 증가
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
                 {
-                    Debug.Log("[UserDataManager] 서버에서 진행 데이터를 불러옵니다...");
-                    var keys = new HashSet<string> { "UserSaveData" };
                     var loadedData = await Unity.Services.CloudSave.CloudSaveService.Instance.Data.Player.LoadAsync(keys);
 
                     if (loadedData.TryGetValue("UserSaveData", out var cloudJson))
@@ -111,23 +156,27 @@ namespace TDF.Runtime.Managers
                     }
                     else
                     {
-                        // 클라우드에 데이터가 전혀 없는 신규 유저
                         saveData = new UserSaveData();
                         Debug.Log("[UserDataManager] 신규 유저입니다. 데이터를 초기화합니다.");
-                        Save(); // 신규 초기 데이터를 즉시 서버에 저장
+                        Save(); 
                     }
+                    return; // 성공 시 함수 종료
                 }
-                else
+                catch (Exception e)
                 {
-                    Debug.LogWarning("[UserDataManager] 로그인되어 있지 않아 데이터를 불러올 수 없습니다.");
-                    saveData = new UserSaveData();
+                    Debug.LogWarning($"[UserDataManager] 클라우드 로드 재시도 중 ({i+1}/{maxRetries}). 오류: {e.Message}");
+                    await Awaitable.WaitForSecondsAsync(1.5f); // 대기 시간 증가
                 }
             }
-            catch (Exception e)
-            {
-                Debug.LogError($"[UserDataManager] 로드 실패: {e.Message}");
-                if (saveData == null) saveData = new UserSaveData();
-            }
+
+            // 모든 재시도 실패 시 빈 데이터로 초기화
+            Debug.LogError("[UserDataManager] 클라우드 데이터를 불러오는데 최종 실패했습니다.");
+            if (saveData == null) saveData = new UserSaveData();
+        }
+        
+        private async void LoadFromCloudEventWrapper()
+        {
+            await LoadFromCloudAsync();
         }
 
         // ══════════════════════════════════════════════════════════════════

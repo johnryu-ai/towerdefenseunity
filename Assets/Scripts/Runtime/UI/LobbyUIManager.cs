@@ -13,8 +13,8 @@ namespace TDF.Runtime.UI
         [Header("Scene")]
         public string gameSceneName = "SampleScene";
 
-        [Header("All Stages (순서대로. 10개씩 자동 그룹화: 0~9=Stage1, 10~19=Stage2 …)")]
-        public CampaignData allStages;
+        [Header("Worlds (순서대로 1번 월드, 2번 월드...)")]
+        public List<CampaignData> worlds = new List<CampaignData>();
 
         [Header("Shop / Achievement / Event Data")]
         public List<ShopItemData>    shopItems    = new List<ShopItemData>();
@@ -32,15 +32,6 @@ namespace TDF.Runtime.UI
 
         // ═════════════════════════════════════════════════════════════════
         // ── 스테이지 헬퍼 ──────────────────────────────────────────────────
-        int TotalStages  => allStages?.stages?.Count ?? 0;
-        int GroupCount   => Mathf.CeilToInt(TotalStages / 10f);
-
-        StageData GetStage(int groupIdx, int subIdx)
-        {
-            int flat = groupIdx * 10 + subIdx;
-            return (allStages?.stages != null && flat < allStages.stages.Count) ? allStages.stages[flat] : null;
-        }
-
         bool IsCleared(StageData st)
         {
             if (st == null || UserDataManager.Instance == null) return false;
@@ -48,26 +39,74 @@ namespace TDF.Runtime.UI
             return r != null && r.cleared;
         }
 
+        bool IsStageUnlocked(int wIdx, int sIdx)
+        {
+            if (wIdx == 0 && sIdx == 0) return true; // 가장 첫 스테이지는 무조건 열림
+            
+            if (sIdx > 0)
+            {
+                // 같은 월드의 이전 스테이지 클리어 확인
+                var prevSt = worlds[wIdx].stages[sIdx - 1];
+                return IsCleared(prevSt);
+            }
+            else
+            {
+                // 첫 스테이지라면 이전 월드의 마지막 스테이지 클리어 확인
+                if (wIdx > 0 && worlds[wIdx - 1].stages.Count > 0)
+                {
+                    var prevWorldLastSt = worlds[wIdx - 1].stages[worlds[wIdx - 1].stages.Count - 1];
+                    return IsCleared(prevWorldLastSt);
+                }
+            }
+            return false;
+        }
+
+        bool IsWorldUnlocked(int wIdx)
+        {
+            if (wIdx == 0) return true;
+            // 이전 월드의 마지막 스테이지를 클리어해야 다음 월드가 열림
+            if (wIdx > 0 && worlds[wIdx - 1].stages.Count > 0)
+            {
+                var prevWorldLastSt = worlds[wIdx - 1].stages[worlds[wIdx - 1].stages.Count - 1];
+                return IsCleared(prevWorldLastSt);
+            }
+            return false;
+        }
+
+        void GetFirstUnclearedStage(out int wIdx, out int sIdx)
+        {
+            wIdx = -1; sIdx = -1;
+            for (int i = 0; i < worlds.Count; i++)
+            {
+                if (worlds[i] == null || worlds[i].stages == null) continue;
+                for (int j = 0; j < worlds[i].stages.Count; j++)
+                {
+                    if (!IsCleared(worlds[i].stages[j]))
+                    {
+                        wIdx = i; sIdx = j; return;
+                    }
+                }
+            }
+        }
+
         // ─────────────────────────────────────────────────────────────────
         private void Start()
         {
 #if UNITY_EDITOR
             // 에디터에서 테스트 중일 때 인스펙터 리스트가 비어있다면 자동 색인 후 할당
-            if (allStages == null)
+            if (worlds == null || worlds.Count == 0)
             {
                 string[] guids = UnityEditor.AssetDatabase.FindAssets("t:CampaignData");
+                worlds = new List<CampaignData>();
                 foreach (string guid in guids)
                 {
                     string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                     CampaignData camp = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignData>(path);
-                    if (camp != null && camp.stages != null && camp.stages.Count > 0)
-                    {
-                        allStages = camp;
-                        break;
-                    }
+                    if (camp != null) worlds.Add(camp);
                 }
-                if (allStages != null)
-                    Debug.Log($"[LobbyUIManager] allStages가 비어 있어 자동으로 {allStages.name} 할당 완료!");
+                worlds.Sort((a, b) => a.name.CompareTo(b.name));
+                if (worlds.Count > 0)
+                    Debug.Log($"[LobbyUIManager] worlds가 비어 있어 자동으로 {worlds.Count}개 할당 완료!");
             }
 
             if (shopItems == null || shopItems.Count == 0)
@@ -236,26 +275,31 @@ namespace TDF.Runtime.UI
 
         void GoToNextChallenge()
         {
-            if (allStages?.stages == null) { Debug.LogWarning("[LobbyUIManager] allStages가 비어 있습니다."); return; }
-            for (int i = 0; i < allStages.stages.Count; i++)
+            if (worlds == null || worlds.Count == 0) { Debug.LogWarning("[LobbyUIManager] worlds가 비어 있습니다."); return; }
+            GetFirstUnclearedStage(out int wIdx, out int sIdx);
+            
+            if (wIdx != -1 && sIdx != -1)
             {
-                var st = allStages.stages[i];
-                if (st == null) continue;
-                if (!IsCleared(st)) { LoadStage(i); return; }
+                LoadStage(wIdx, sIdx);
             }
-            // 모두 클리어 → 마지막 스테이지
-            LoadStage(allStages.stages.Count - 1);
+            else
+            {
+                // 모두 클리어 → 마지막 월드의 마지막 스테이지
+                int lastW = worlds.Count - 1;
+                int lastS = worlds[lastW].stages.Count - 1;
+                LoadStage(lastW, lastS);
+            }
         }
 
-        void LoadStage(int flatIndex)
+        void LoadStage(int wIdx, int sIdx)
         {
-            if (allStages == null) 
+            if (worlds == null || wIdx < 0 || wIdx >= worlds.Count) 
             {
-                Debug.LogError("[LobbyUIManager] allStages 데이터가 없습니다! 인스펙터를 확인해주세요.");
+                Debug.LogError("[LobbyUIManager] 유효하지 않은 월드 인덱스입니다.");
                 return;
             }
-            GameManager.staticTestCampaign   = allStages;
-            GameManager.staticTestStageIndex = flatIndex;
+            GameManager.staticTestCampaign   = worlds[wIdx];
+            GameManager.staticTestStageIndex = sIdx;
             
             if (Application.CanStreamedLevelBeLoaded(gameSceneName))
             {
@@ -268,18 +312,19 @@ namespace TDF.Runtime.UI
         }
 
         // ═════════════════════════════════════════════════════════════════
-        // 2. 스테이지 그룹 선택 (Stage 1 ~ 10)
+        // 2. 월드 선택 (World 1 ~ 10)
         // ═════════════════════════════════════════════════════════════════
         void DrawStageGroups()
         {
-            Header("📋  스테이지 선택");
+            Header("📋  월드 선택");
             CurrencyBar();
 
-            int totalGroups = Mathf.Min(GroupCount, 10);
             float bw = 340f, bh = 120f, gap = 20f;
             int cols = 5;
             float totalW = cols * bw + (cols - 1) * gap;
             float startX = (1920f - totalW) / 2f;
+
+            GetFirstUnclearedStage(out int activeWIdx, out int activeSIdx);
 
             for (int i = 0; i < 10; i++)
             {
@@ -287,32 +332,73 @@ namespace TDF.Runtime.UI
                 float x = startX + col * (bw + gap);
                 float y = 160f + row * (bh + gap);
 
-                bool hasGroup = i < totalGroups;
-                // 그룹 내 클리어 수 계산
+                bool hasWorld = i < worlds.Count && worlds[i] != null;
+                bool isUnlocked = hasWorld && IsWorldUnlocked(i);
+                
                 int cleared = 0;
-                if (hasGroup)
-                    for (int s = 0; s < 10; s++)
-                        if (IsCleared(GetStage(i, s))) cleared++;
+                int totalSt = hasWorld ? worlds[i].stages.Count : 10;
+                if (hasWorld)
+                {
+                    for (int s = 0; s < worlds[i].stages.Count; s++)
+                        if (IsCleared(worlds[i].stages[s])) cleared++;
+                }
 
-                GUI.enabled = hasGroup;
+                GUI.enabled = hasWorld;
                 int captured = i;
-                var col2 = cleared == 10 ? new Color(0.1f, 0.55f, 0.18f)
-                         : cleared > 0   ? new Color(0.55f, 0.38f, 0.08f)
-                                         : new Color(0.2f, 0.38f, 0.75f);
-                string lbl = hasGroup ? $"Stage {i + 1}\n({cleared}/10)" : $"Stage {i + 1}\n(준비 중)";
-                ColorBtn(col2, new Rect(x, y, bw, bh), lbl, () => { selectedGroup = captured; Go(LobbyScreen.StageDetail); });
+                
+                Color btnCol;
+                if (!isUnlocked)
+                {
+                    btnCol = new Color(0.15f, 0.15f, 0.2f); // 비활성화 어둡게
+                }
+                else if (cleared == totalSt && totalSt > 0)
+                {
+                    btnCol = new Color(0.1f, 0.55f, 0.18f); // 올클리어
+                }
+                else
+                {
+                    btnCol = new Color(0.2f, 0.38f, 0.75f); // 진행 중 기본 색상
+                }
+
+                string lbl = hasWorld ? $"World {i + 1}\n({cleared}/{totalSt})" : $"World {i + 1}\n(준비 중)";
+
+                // 현재 진행중인 월드 글자 빛나게 표시
+                bool isCurrentActive = (i == activeWIdx);
+                var prevStyle = GUI.skin.button;
+                if (isCurrentActive)
+                {
+                    var activeStyle = new GUIStyle(_btn);
+                    activeStyle.normal.textColor = Color.yellow; // 빛나는 텍스트 효과 (노란색)
+                    GUI.skin.button = activeStyle;
+                }
+                else
+                {
+                    GUI.skin.button = _btn;
+                }
+
+                if (isUnlocked)
+                {
+                    ColorBtn(btnCol, new Rect(x, y, bw, bh), lbl, () => { selectedGroup = captured; Go(LobbyScreen.StageDetail); });
+                }
+                else
+                {
+                    ColorBtn(btnCol, new Rect(x, y, bw, bh), lbl, null);
+                }
+
+                GUI.skin.button = prevStyle;
                 GUI.enabled = true;
             }
             BackBtn();
         }
 
         // ═════════════════════════════════════════════════════════════════
-        // 3. 스테이지 상세 (1-1 ~ 1-10)
+        // 3. 스테이지 상세 (월드 내부 스테이지 선택)
         // ═════════════════════════════════════════════════════════════════
         void DrawStageDetail()
         {
-            if (selectedGroup < 0 || selectedGroup >= GroupCount) { Go(LobbyScreen.StageGroups); return; }
-            Header($"📋  Stage {selectedGroup + 1}  –  스테이지 선택");
+            if (selectedGroup < 0 || selectedGroup >= worlds.Count) { Go(LobbyScreen.StageGroups); return; }
+            var currentWorld = worlds[selectedGroup];
+            Header($"📋  World {selectedGroup + 1}  –  스테이지 선택");
             CurrencyBar();
 
             float bw = 340f, bh = 120f, gap = 20f;
@@ -320,18 +406,21 @@ namespace TDF.Runtime.UI
             float totalW = cols * bw + (cols - 1) * gap;
             float startX = (1920f - totalW) / 2f;
 
+            GetFirstUnclearedStage(out int activeWIdx, out int activeSIdx);
+
             for (int i = 0; i < 10; i++)
             {
                 int row = i / cols, col = i % cols;
                 float x = startX + col * (bw + gap);
                 float y = 160f + row * (bh + gap);
 
-                var stage = GetStage(selectedGroup, i);
-                bool hasStage = stage != null;
+                bool hasStage = currentWorld != null && currentWorld.stages != null && i < currentWorld.stages.Count;
+                var stage = hasStage ? currentWorld.stages[i] : null;
                 GUI.enabled = hasStage;
 
-                bool done = IsCleared(stage);
-                // 최고 점수 표시
+                bool isUnlocked = hasStage && IsStageUnlocked(selectedGroup, i);
+                bool done = hasStage && IsCleared(stage);
+                
                 string scoreTxt = "";
                 if (done && UserDataManager.Instance != null)
                 {
@@ -340,18 +429,54 @@ namespace TDF.Runtime.UI
                         scoreTxt = $"\n{rec.bestResult.score:N0}점";
                 }
 
-                int flatIdx = selectedGroup * 10 + i;
-                var btnCol = done ? new Color(0.1f, 0.55f, 0.18f) : new Color(0.2f, 0.38f, 0.75f);
+                Color btnCol;
+                if (!isUnlocked)
+                {
+                    btnCol = new Color(0.15f, 0.15f, 0.2f); // 비활성화 어둡게
+                }
+                else if (done)
+                {
+                    btnCol = new Color(0.1f, 0.55f, 0.18f); // 클리어 완료
+                }
+                else
+                {
+                    btnCol = new Color(0.2f, 0.38f, 0.75f); // 도전 가능
+                }
+
                 string lbl = hasStage
                     ? $"{selectedGroup + 1}-{i + 1}{(done ? " ✓" : "")}{scoreTxt}"
                     : $"{selectedGroup + 1}-{i + 1}\n(준비 중)";
 
-                ColorBtn(btnCol, new Rect(x, y, bw, bh), lbl, () => LoadStage(flatIdx));
+                // 현재 진행중인 스테이지 글자 빛나게 표시
+                bool isCurrentActive = (selectedGroup == activeWIdx && i == activeSIdx);
+                var prevStyle = GUI.skin.button;
+                if (isCurrentActive)
+                {
+                    var activeStyle = new GUIStyle(_btn);
+                    activeStyle.normal.textColor = Color.yellow; // 빛나는 텍스트 효과
+                    GUI.skin.button = activeStyle;
+                }
+                else
+                {
+                    GUI.skin.button = _btn;
+                }
+
+                if (isUnlocked)
+                {
+                    int capIdx = i;
+                    ColorBtn(btnCol, new Rect(x, y, bw, bh), lbl, () => LoadStage(selectedGroup, capIdx));
+                }
+                else
+                {
+                    ColorBtn(btnCol, new Rect(x, y, bw, bh), lbl, null);
+                }
+
+                GUI.skin.button = prevStyle;
                 GUI.enabled = true;
             }
 
             GUI.color = new Color(0.3f, 0.3f, 0.7f);
-            if (GUI.Button(new Rect(310, 1000, 280, 60), "← 그룹 선택", _smallBtn)) Go(LobbyScreen.StageGroups);
+            if (GUI.Button(new Rect(310, 1000, 280, 60), "← 월드 선택", _smallBtn)) Go(LobbyScreen.StageGroups);
             GUI.color = Color.white;
             BackBtn();
         }

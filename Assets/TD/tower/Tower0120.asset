@@ -23,9 +23,10 @@ MonoBehaviour:
     range: 4
     damage: 10
     attackSpeed: 0.5
+    projectileSpeed: 10
     sellPrice: 240
     manaCost: 0
-    projectileSprite: {fileID: 0}
+    projectileSprite: {fileID: 1797201128194229901, guid: c729125eac6875e4e813dd8321ea969d, type: 3}
     projectileAnim: {fileID: 7400000, guid: c510a206b20ace242b5321130662c6dd, type: 2}
   assets:
     idleSprite: {fileID: 0}

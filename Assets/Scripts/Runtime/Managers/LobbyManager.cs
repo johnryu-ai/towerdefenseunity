@@ -19,8 +19,8 @@ namespace TDF.Runtime.Managers
         [Header("Scene to Load")]
         public string gameSceneName = "SampleScene";
 
-        [Header("Campaign Data")]
-        public CampaignData currentCampaign;
+        [Header("Campaign Data (Worlds)")]
+        public List<CampaignData> worlds = new List<CampaignData>();
 
         private Dictionary<PageType, GameObject> pageInstances = new Dictionary<PageType, GameObject>();
         private PageType currentPage = PageType.Main;
@@ -50,6 +50,22 @@ namespace TDF.Runtime.Managers
                 GameObject economyObj = new GameObject("EconomyManager_AutoSpawned");
                 economyObj.AddComponent<EconomyManager>();
             }
+
+#if UNITY_EDITOR
+            // 에디터에서 실행 시 worlds 리스트 자동 채우기
+            if (worlds == null || worlds.Count == 0)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:CampaignData");
+                worlds = new List<CampaignData>();
+                foreach (string guid in guids)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    CampaignData camp = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignData>(path);
+                    if (camp != null) worlds.Add(camp);
+                }
+                worlds.Sort((a,b) => a.name.CompareTo(b.name));
+            }
+#endif
         }
 
         private async void Start()
@@ -68,26 +84,19 @@ namespace TDF.Runtime.Managers
                 // 백엔드 매니저가 방금 생성되어 초기화 중일 수 있으므로 대기합니다.
                 await BackendManager.Instance.WaitUntilInitializedAsync();
                 
-                // 만약 일시적인 네트워크 문제나 씬 전환 중 세션이 풀렸다면 복구를 시도합니다.
-                bool isSigned = BackendManager.Instance.IsSignedIn;
-                if (!isSigned)
+                // 이미 로그인된 상태(씬 전환으로 돌아온 경우)라면 바로 Main 로비로 갑니다.
+                if (BackendManager.Instance.IsSignedIn)
                 {
-                    isSigned = await BackendManager.Instance.TrySignInCachedUserAsync();
-                }
-
-                if (isSigned)
-                {
-                    // 이미 로그인 된 상태라면 현재 씬이 메인 로비일 때만 Main 페이지를 엽니다.
-                    string sceneName = SceneManager.GetActiveScene().name;
-                    if (sceneName == "Main" || sceneName == "Lobby")
+                    if (UserDataManager.Instance != null)
                     {
-                        OpenPage(PageType.Main);
+                        await UserDataManager.Instance.LoadFromCloudAsync();
                     }
+                    OpenPage(PageType.Main);
                     return;
                 }
             }
             
-            // 로그인되어 있지 않다면 Login 페이지를 엽니다.
+            // 처음 앱을 켰거나 로그인되어 있지 않다면 무조건 Login 화면부터 보여줍니다.
             OpenPage(PageType.Login);
         }
 
@@ -123,7 +132,7 @@ namespace TDF.Runtime.Managers
                 titleTxt.color = Color.white;
 
                 // Helper to create buttons
-                void CreateLoginBtn(string name, string text, float yOffset, Color col, UnityEngine.Events.UnityAction action)
+                GameObject CreateLoginBtn(string name, string text, float yOffset, Color col, UnityEngine.Events.UnityAction action)
                 {
                     var btnObj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
                     btnObj.transform.SetParent(loginObj.transform, false);
@@ -146,10 +155,16 @@ namespace TDF.Runtime.Managers
                     btnTxt.color = Color.white;
 
                     btnObj.GetComponent<Button>().onClick.AddListener(action);
+                    return btnObj;
                 }
 
-                CreateLoginBtn("UnityAccountBtn", "Sign in with Unity / Google", 20f, new Color(0.1f, 0.6f, 0.4f, 1f), OnUnityPlayerAccountLoginClicked);
-                CreateLoginBtn("GuestBtn", "Guest Login", -80f, new Color(0.4f, 0.4f, 0.4f, 1f), OnLoginClicked);
+                CreateLoginBtn("UnityAccountBtn", "Sign in with Unity / Google", 60f, new Color(0.1f, 0.6f, 0.4f, 1f), OnUnityPlayerAccountLoginClicked);
+                CreateLoginBtn("GuestBtn", "Guest Login", -40f, new Color(0.4f, 0.4f, 0.4f, 1f), OnLoginClicked);
+
+                // START GAME 버튼 추가 (하단에 크게)
+                var startBtn = CreateLoginBtn("AutoStartBtn", "START GAME", -180f, new Color(0.8f, 0.2f, 0.2f, 1f), OnAutoStartClicked);
+                startBtn.GetComponent<RectTransform>().sizeDelta = new Vector2(600, 100);
+                startBtn.GetComponentInChildren<Text>().fontSize = 45;
 
                 pageInstances[PageType.Login] = loginObj;
                 loginObj.SetActive(false);
@@ -196,10 +211,21 @@ namespace TDF.Runtime.Managers
             if (BackendManager.Instance != null)
             {
                 await BackendManager.Instance.SignInAnonymouslyAsync();
-                await Awaitable.WaitForSecondsAsync(1.5f); // 로딩 연출 및 서버 동기화 시간
+                
+                if (UserDataManager.Instance != null && BackendManager.Instance.IsSignedIn)
+                {
+                    await UserDataManager.Instance.LoadFromCloudAsync();
+                    OpenPage(PageType.Main);
+                }
+                else
+                {
+                    OpenPage(PageType.Login);
+                }
             }
-
-            OpenPage(PageType.Main);
+            else
+            {
+                OpenPage(PageType.Login);
+            }
         }
 
         private async void OnUnityPlayerAccountLoginClicked()
@@ -210,10 +236,56 @@ namespace TDF.Runtime.Managers
             if (BackendManager.Instance != null)
             {
                 await BackendManager.Instance.SignInWithUnityPlayerAccountAsync();
-                await Awaitable.WaitForSecondsAsync(1.5f);
+                
+                if (UserDataManager.Instance != null && BackendManager.Instance.IsSignedIn)
+                {
+                    await UserDataManager.Instance.LoadFromCloudAsync();
+                    OpenPage(PageType.Main);
+                }
+                else
+                {
+                    OpenPage(PageType.Login);
+                }
             }
-            
-            OpenPage(PageType.Main);
+            else
+            {
+                OpenPage(PageType.Login);
+            }
+        }
+
+        private async void OnAutoStartClicked()
+        {
+            Debug.Log("[LobbyManager] Auto Start Game Clicked.");
+            OpenPage(PageType.Loading);
+
+            if (BackendManager.Instance != null)
+            {
+                bool isSigned = BackendManager.Instance.IsSignedIn;
+                if (!isSigned)
+                {
+                    // 로컬 디바이스에 저장된 마지막 로그인 정보(토큰)를 이용해 자동 로그인을 시도합니다.
+                    isSigned = await BackendManager.Instance.TrySignInCachedUserAsync();
+                }
+
+                if (isSigned)
+                {
+                    if (UserDataManager.Instance != null)
+                    {
+                        await UserDataManager.Instance.LoadFromCloudAsync();
+                    }
+                    OpenPage(PageType.Main);
+                }
+                else
+                {
+                    Debug.LogWarning("[LobbyManager] 이전에 로그인한 기록이 없거나 세션이 만료되었습니다.");
+                    // 기록이 없으면 다시 로그인 페이지로 돌아갑니다. (또는 알림 팝업을 띄울 수도 있습니다)
+                    OpenPage(PageType.Login);
+                }
+            }
+            else
+            {
+                OpenPage(PageType.Login);
+            }
         }
 
         public void RegisterMainPage(GameObject mainPageObj)
@@ -372,34 +444,40 @@ namespace TDF.Runtime.Managers
             {
                 clearedCount = UserDataManager.Instance.Data.mapClearRecords.Count;
             }
-            StartGameAt(clearedCount);
+            int world = clearedCount / 10;
+            int stage = clearedCount % 10;
+            StartGameAt(world, stage);
         }
 
-        public void StartGameAt(int stageIndex)
+        public void StartGameAt(int worldIndex, int stageIndex)
         {
 #if UNITY_EDITOR
-            if (currentCampaign == null)
+            if (worlds == null || worlds.Count == 0)
             {
                 string[] guids = UnityEditor.AssetDatabase.FindAssets("t:CampaignData");
+                worlds = new List<CampaignData>();
                 foreach (string guid in guids)
                 {
                     string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                     CampaignData camp = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignData>(path);
-                    if (camp != null && camp.stages != null && camp.stages.Count > 0)
-                    {
-                        currentCampaign = camp;
-                        break;
-                    }
+                    if (camp != null) worlds.Add(camp);
                 }
+                worlds.Sort((a,b) => a.name.CompareTo(b.name));
             }
 #endif
-            if (currentCampaign != null)
+            if (worldIndex >= 0 && worldIndex < worlds.Count)
             {
-                TDF.Runtime.Managers.GameManager.staticTestCampaign = currentCampaign;
+                TDF.Runtime.Managers.GameManager.staticTestCampaign = worlds[worldIndex];
+                TDF.Runtime.Managers.GameManager.staticTestStageIndex = stageIndex;
+                Debug.Log($"게임 씬으로 이동합니다: {gameSceneName} | World: {worldIndex+1}, Stage: {stageIndex+1}");
             }
-            // staticTestCampaign이 null이면 GameManager의 인스펙터 참조를 그대로 사용하게 됨
-            TDF.Runtime.Managers.GameManager.staticTestStageIndex = stageIndex;
-            Debug.Log($"게임 씬으로 이동합니다: {gameSceneName} | Stage Index: {stageIndex}");
+            else
+            {
+                Debug.LogWarning($"[LobbyManager] Invalid worldIndex: {worldIndex}. Fallback to index 0.");
+                if (worlds.Count > 0) TDF.Runtime.Managers.GameManager.staticTestCampaign = worlds[0];
+                TDF.Runtime.Managers.GameManager.staticTestStageIndex = 0;
+            }
+            
             SceneManager.LoadScene(gameSceneName);
         }
     }

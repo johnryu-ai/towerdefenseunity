@@ -115,6 +115,8 @@ namespace TDF.Runtime.Entities
                     var monster = MonsterController.ActiveMonsters[i];
                     if (monster != null && monster.gameObject.activeInHierarchy && !piercedTargets.Contains(monster))
                     {
+                        if (!IsValidTargetType(monster.GetFlyType())) continue;
+
                         if (Vector2.SqrMagnitude(cachedTransform.position - monster.transform.position) < 0.25f)
                         {
                             piercedTargets.Add(monster);
@@ -136,7 +138,7 @@ namespace TDF.Runtime.Entities
                 }
                 else if (attackType == AttackType.Multi)
                 {
-                    ExplodeAreaAt(cachedTransform.position, 0.5f);
+                    ExplodeAreaAt(cachedTransform.position, 0.7f);
                     ReturnToPool();
                 }
                 else ReturnToPool();
@@ -162,7 +164,7 @@ namespace TDF.Runtime.Entities
                 {
                     Vector3 impactCenter = targetWorldPos;
                     if (target != null && target.GetFlyType() == MonsterFlyType.Air) impactCenter -= Vector3.up;
-                    ExplodeAreaAt(impactCenter, 0.5f);
+                    ExplodeAreaAt(impactCenter, 0.7f);
                     ReturnToPool();
                 }
                 else

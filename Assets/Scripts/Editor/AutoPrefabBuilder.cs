@@ -12,6 +12,7 @@ namespace TDF.Editor
         static AutoPrefabBuilder()
         {
             EditorApplication.delayCall += CheckAndGeneratePrefabs;
+            EditorApplication.delayCall += FixLegacyAnimations;
         }
 
         static void CheckAndGeneratePrefabs()
@@ -122,6 +123,29 @@ namespace TDF.Editor
             if (createdAny)
             {
                 AssetDatabase.SaveAssets();
+            }
+        }
+
+        static void FixLegacyAnimations()
+        {
+            string[] animGuids = AssetDatabase.FindAssets("t:AnimationClip", new[] { "Assets" });
+            bool changed = false;
+            foreach (string guid in animGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+                if (clip != null && clip.legacy)
+                {
+                    clip.legacy = false;
+                    EditorUtility.SetDirty(clip);
+                    changed = true;
+                    Debug.Log($"🔧 [AutoPrefabBuilder] Fixed legacy AnimationClip: {path}");
+                }
+            }
+            if (changed)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
         }
     }

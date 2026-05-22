@@ -7,7 +7,7 @@ namespace TDF.Editor
 
     public class TDMainEditorWindow : EditorWindow
     {
-        private enum Tab { Map, Tower, Monster, Wave, Stage, Campaign, AssetMeta, PageUI, LobbyUI, Attribute }
+        private enum Tab { Map, Tower, Monster, Wave, Stage, Campaign, AssetMeta, PageUI, LobbyUI, Attribute, Score, Font, GameplayUI }
         private Tab currentTab = Tab.Map;
 
         // 모듈 인스턴스
@@ -20,6 +20,9 @@ namespace TDF.Editor
         private PageEditorModule pageEditorModule = new PageEditorModule();
         private LobbyUIEditorModule lobbyUIEditorModule = new LobbyUIEditorModule();
         private AttributeEditorModule attributeEditorModule = new AttributeEditorModule();
+        private ScoreEditorModule scoreEditorModule = new ScoreEditorModule();
+        private FontEditorModule fontEditorModule = new FontEditorModule();
+        private GameplayUIEditorModule gameplayUIEditorModule = new GameplayUIEditorModule();
 
         [MenuItem("Tools/TDF/Tower Defense Editor")]
         public static void ShowWindow()
@@ -58,6 +61,9 @@ namespace TDF.Editor
             if (GUILayout.Toggle(currentTab == Tab.PageUI, "Page & UI Editor", "Button")) currentTab = Tab.PageUI;
             if (GUILayout.Toggle(currentTab == Tab.LobbyUI, "Visual UI Editor", "Button")) currentTab = Tab.LobbyUI;
             if (GUILayout.Toggle(currentTab == Tab.Attribute, "Attribute Settings", "Button")) currentTab = Tab.Attribute;
+            if (GUILayout.Toggle(currentTab == Tab.Score, "Score Settings", "Button")) currentTab = Tab.Score;
+            if (GUILayout.Toggle(currentTab == Tab.Font, "Font Settings", "Button")) currentTab = Tab.Font;
+            if (GUILayout.Toggle(currentTab == Tab.GameplayUI, "Gameplay UI", "Button")) currentTab = Tab.GameplayUI;
             if (GUILayout.Toggle(currentTab == Tab.AssetMeta, "Asset & Meta", "Button")) currentTab = Tab.AssetMeta;
 
             GUILayout.EndVertical();
@@ -95,6 +101,15 @@ namespace TDF.Editor
                     break;
                 case Tab.Attribute:
                     attributeEditorModule.Draw();
+                    break;
+                case Tab.Score:
+                    scoreEditorModule.Draw();
+                    break;
+                case Tab.Font:
+                    fontEditorModule.Draw();
+                    break;
+                case Tab.GameplayUI:
+                    gameplayUIEditorModule.Draw();
                     break;
                 case Tab.AssetMeta:
                     GUILayout.Label("Asset & Meta Editor", EditorStyles.boldLabel);

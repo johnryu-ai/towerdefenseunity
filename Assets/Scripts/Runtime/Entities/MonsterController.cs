@@ -300,6 +300,8 @@ namespace TDF.Runtime.Entities
                     if (sr.gameObject.name == "Shadow") continue;
                     if (sr.gameObject.name == "HpBarBg") continue;
                     if (sr.gameObject.name == "HpBarFg") continue;
+                    if (sr.gameObject.name == "FireEffect" || sr.gameObject.name == "IceEffect") continue;
+                    if (sr.transform.parent != null && (sr.transform.parent.name == "FireEffect" || sr.transform.parent.name == "IceEffect")) continue;
                     if (sr.sprite != null)
                     {
                         float bound = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y);
@@ -366,6 +368,7 @@ namespace TDF.Runtime.Entities
                 hpBarFgSr.sortingOrder = baseOrder + 51;
             }
 
+            statusEffects.UpdateEffectsPositionAndScale();
             UpdateSortingOrder();
         }
 
@@ -386,6 +389,18 @@ namespace TDF.Runtime.Entities
                 if (sr.gameObject.name == "Shadow") continue;
                 if (sr.gameObject.name == "HpBarBg") continue;
                 if (sr.gameObject.name == "HpBarFg") continue;
+                
+                // FireEffect나 IceEffect 또는 그 자식 Visual의 SpriteRenderer인 경우 소팅오더 보정
+                if (sr.gameObject.name == "FireEffect" || (sr.transform.parent != null && sr.transform.parent.gameObject.name == "FireEffect"))
+                {
+                    sr.sortingOrder = baseOrder + 5;
+                    continue;
+                }
+                if (sr.gameObject.name == "IceEffect" || (sr.transform.parent != null && sr.transform.parent.gameObject.name == "IceEffect"))
+                {
+                    sr.sortingOrder = baseOrder + 5;
+                    continue;
+                }
                 sr.sortingOrder = baseOrder;
             }
 

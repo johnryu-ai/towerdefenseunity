@@ -30,11 +30,59 @@ namespace TDF.Editor
                 GameObject cvObj = new GameObject("LobbyCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
                 canvas = cvObj.GetComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                
-                CanvasScaler cs = cvObj.GetComponent<CanvasScaler>();
-                cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                cs.referenceResolution = new Vector2(1920, 1080);
             }
+
+            CanvasScaler cs = canvas.GetComponent<CanvasScaler>();
+            if (cs == null) cs = canvas.gameObject.AddComponent<CanvasScaler>();
+            cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(2340, 1080);
+            cs.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            cs.matchWidthOrHeight = 1f; // 상하에 꽉 차게 조율 (Height 매칭)
+
+            // 전체 화면을 검은색으로 채울 Background 생성
+            Transform blackBgTrans = canvas.transform.Find("BlackBackground");
+            if (blackBgTrans == null)
+            {
+                GameObject bgObj = new GameObject("BlackBackground", typeof(RectTransform), typeof(Image));
+                bgObj.transform.SetParent(canvas.transform, false);
+                bgObj.transform.SetAsFirstSibling(); // 가장 뒤에 위치
+                RectTransform bgRt = bgObj.GetComponent<RectTransform>();
+                bgRt.anchorMin = Vector2.zero;
+                bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero;
+                bgRt.offsetMax = Vector2.zero;
+                bgObj.GetComponent<Image>().color = Color.black;
+            }
+
+            // 19.5:9 비율을 유지할 AspectContainer 생성
+            Transform aspectTrans = canvas.transform.Find("AspectContainer");
+            GameObject aspectObj;
+            if (aspectTrans == null)
+            {
+                aspectObj = new GameObject("AspectContainer", typeof(RectTransform), typeof(AspectRatioFitter));
+                aspectObj.transform.SetParent(canvas.transform, false);
+                
+                // BlackBackground 보다는 앞에 위치
+                if (canvas.transform.Find("BlackBackground") != null)
+                {
+                    aspectObj.transform.SetSiblingIndex(1);
+                }
+            }
+            else
+            {
+                aspectObj = aspectTrans.gameObject;
+            }
+
+            RectTransform aspectRt = aspectObj.GetComponent<RectTransform>();
+            aspectRt.anchorMin = Vector2.zero;
+            aspectRt.anchorMax = Vector2.one;
+            aspectRt.offsetMin = Vector2.zero;
+            aspectRt.offsetMax = Vector2.zero;
+
+            AspectRatioFitter arf = aspectObj.GetComponent<AspectRatioFitter>();
+            if (arf == null) arf = aspectObj.AddComponent<AspectRatioFitter>();
+            arf.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            arf.aspectRatio = 1920f / 1080f; // 기존 UI 규격에 맞추어 16:9 비율 유지 (19.5:9 화면에서 하단 잘림 방지)
 
             // EventSystem 및 Input 모듈 체크/교체
             UnityEngine.EventSystems.EventSystem es = GameObject.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
@@ -63,7 +111,7 @@ namespace TDF.Editor
                 lm = lmObj.GetComponent<LobbyManager>();
             }
 
-            lm.uiRoot = canvas.transform;
+            lm.uiRoot = aspectObj.transform;
 
             // 3. 모든 PageData 찾아서 할당
             string[] guids = AssetDatabase.FindAssets("t:PageData");
@@ -174,12 +222,15 @@ namespace TDF.Editor
             }
 
             // 2. LobbyUI_Root 찾기 또는 생성
-            Transform rootTransform = canvas.transform.Find("LobbyUI_Root");
+            Transform aspectTrans = canvas.transform.Find("AspectContainer");
+            Transform parentTrans = aspectTrans != null ? aspectTrans : canvas.transform;
+
+            Transform rootTransform = parentTrans.Find("LobbyUI_Root");
             GameObject rootObj;
             if (rootTransform == null)
             {
                 rootObj = new GameObject("LobbyUI_Root", typeof(RectTransform));
-                rootObj.transform.SetParent(canvas.transform, false);
+                rootObj.transform.SetParent(parentTrans, false);
                 
                 RectTransform rt = rootObj.GetComponent<RectTransform>();
                 rt.anchorMin = Vector2.zero;
@@ -248,7 +299,31 @@ namespace TDF.Editor
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             CanvasScaler cs = cvObj.GetComponent<CanvasScaler>();
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            cs.referenceResolution = new Vector2(1920, 1080);
+            cs.referenceResolution = new Vector2(2340, 1080);
+            cs.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            cs.matchWidthOrHeight = 1f; // 상하에 꽉 차게 조율 (Height 매칭)
+
+            // 전체 화면을 검은색으로 채울 Background 생성
+            GameObject bgObj = new GameObject("BlackBackground", typeof(RectTransform), typeof(Image));
+            bgObj.transform.SetParent(canvas.transform, false);
+            RectTransform bgRt = bgObj.GetComponent<RectTransform>();
+            bgRt.anchorMin = Vector2.zero;
+            bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero;
+            bgRt.offsetMax = Vector2.zero;
+            bgObj.GetComponent<Image>().color = Color.black;
+
+            // 19.5:9 비율을 유지할 AspectContainer 생성
+            GameObject aspectObj = new GameObject("AspectContainer", typeof(RectTransform), typeof(AspectRatioFitter));
+            aspectObj.transform.SetParent(canvas.transform, false);
+            RectTransform aspectRt = aspectObj.GetComponent<RectTransform>();
+            aspectRt.anchorMin = Vector2.zero;
+            aspectRt.anchorMax = Vector2.one;
+            aspectRt.offsetMin = Vector2.zero;
+            aspectRt.offsetMax = Vector2.zero;
+            AspectRatioFitter arf = aspectObj.GetComponent<AspectRatioFitter>();
+            arf.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            arf.aspectRatio = 1920f / 1080f; // 기존 UI 규격에 맞추어 16:9 비율 유지 (19.5:9 화면에서 하단 잘림 방지)
 
             // 3. EventSystem 세팅
             GameObject esObj = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem));
@@ -258,7 +333,7 @@ namespace TDF.Editor
             GameObject mgrObj = new GameObject("Managers");
             
             LobbyManager lm = mgrObj.AddComponent<LobbyManager>();
-            lm.uiRoot = canvas.transform;
+            lm.uiRoot = aspectObj.transform;
 
             if (mgrObj.GetComponent<UserDataManager>() == null)
             {
@@ -276,7 +351,7 @@ namespace TDF.Editor
 
             // 5. LobbyUIBinder 세팅 (여기에 새 UI 연동)
             GameObject rootObj = new GameObject("LobbyUI_Root", typeof(RectTransform));
-            rootObj.transform.SetParent(canvas.transform, false);
+            rootObj.transform.SetParent(aspectObj.transform, false);
             RectTransform rt = rootObj.GetComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;

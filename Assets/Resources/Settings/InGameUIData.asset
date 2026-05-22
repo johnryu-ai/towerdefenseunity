@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c84deabedcb7483418596697093140ce, type: 3}
+  m_Name: InGameUIData
+  m_EditorClassIdentifier: Game::TDF.Core.Data.InGameUIData
+  leftLetterboxImage: {fileID: 0}
+  rightLetterboxImage: {fileID: 0}
+  topPanelBgImage: {fileID: 0}
+  goldIcon: {fileID: 0}
+  hpIcon: {fileID: 0}
+  waveBtnImage: {fileID: 0}
+  speedBtnImage: {fileID: 0}
+  buildPanelBgImage: {fileID: 0}
+  towerItemBgImage: {fileID: 0}
+  closeBtnImage: {fileID: 0}
+  managePanelBgImage: {fileID: 0}
+  upgradeBtnImage: {fileID: 0}
+  sellBtnImage: {fileID: 0}
+  targetBtnImage: {fileID: 0}

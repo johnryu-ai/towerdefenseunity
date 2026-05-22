@@ -1,0 +1,24 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.4/staging' branch; Version is '6000.4.3f1 (39d1a88d4dd1) revision 3789224'; Using compiler version '194234433'; Build Type 'Release'
+OS: 'Windows 10  (10.0.19045) 64bit Professional' Language: 'en' Physical Memory: 16218 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-05-22T19:59:23Z
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-John" at "2026-05-22T19:59:23.002669Z"
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.4.3f1\Editor\Unity.exe
+-runTests
+-batchmode
+-projectPath
+.
+-testPlatform
+EditMode
+-testResults
+Logs/editmode-results.xml
+-logFile
+unity_test.log
+Successfully changed project path to: C:/Users/John/.gemini/antigravity/scratch/Tower Defense Editor for Unity/My project
+C:/Users/John/.gemini/antigravity/scratch/Tower Defense Editor for Unity/My project
+Exiting without the bug reporter. Application will terminate with return code 1

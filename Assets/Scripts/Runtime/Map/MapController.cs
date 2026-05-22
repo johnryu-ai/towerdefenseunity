@@ -28,11 +28,11 @@ namespace TDF.Runtime.Map
 
         private void Start()
         {
-            Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
+            Screen.SetResolution(2340, 1080, FullScreenMode.Windowed);
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;
-                Camera.main.backgroundColor = new Color(0.2f, 0.2f, 0.2f);
+                Camera.main.backgroundColor = Color.black;
             }
         }
 
@@ -101,12 +101,29 @@ namespace TDF.Runtime.Map
                 
                 SpriteRenderer bgSr = bgObj.AddComponent<SpriteRenderer>();
                 bgSr.sprite = mapData.backgroundSprite;
-                bgSr.sortingOrder = 5;
+                bgSr.sortingOrder = 5; // 맵 타일(0)보다 위에 오버레이되도록 설정
+                
+                // 맵의 1890x1080 영역(월드 크기 mapWorldWidth x mapWorldHeight)에 정확히 일치하도록 스케일링 설정
+                bgObj.transform.localScale = new Vector3(mapWorldWidth / bgSr.sprite.bounds.size.x, mapWorldHeight / bgSr.sprite.bounds.size.y, 1f);
+            }
+
+            // Gameplay UI 에디터 전체 배경 이미지 설정 (가장 뒤에 배치)
+            if (GameplayUISettings.Instance != null && GameplayUISettings.Instance.backgroundImage != null)
+            {
+                GameObject uiBgObj = new GameObject("GameplayUIBackground");
+                uiBgObj.transform.SetParent(this.transform);
+                uiBgObj.transform.position = new Vector3(mapWorldWidth / 2f - (TILE_SIZE / 2f), mapWorldHeight / 2f - (TILE_SIZE / 2f), 1f);
+                
+                SpriteRenderer uiBgSr = uiBgObj.AddComponent<SpriteRenderer>();
+                Texture2D tex = GameplayUISettings.Instance.backgroundImage;
+                uiBgSr.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                uiBgSr.sortingOrder = -10; // 가장 뒤에 그리도록 낮은 sorting order 설정
+                
                 if (Camera.main != null)
                 {
                     float screenHeightUnits = Camera.main.orthographicSize * 2f;
-                    float screenWidthUnits = screenHeightUnits * (1920f / 1080f);
-                    bgObj.transform.localScale = new Vector3(screenWidthUnits / bgSr.sprite.bounds.size.x, screenHeightUnits / bgSr.sprite.bounds.size.y, 1f);
+                    float screenWidthUnits = screenHeightUnits * ((float)Screen.width / Screen.height);
+                    uiBgObj.transform.localScale = new Vector3(screenWidthUnits / uiBgSr.sprite.bounds.size.x, screenHeightUnits / uiBgSr.sprite.bounds.size.y, 1f);
                 }
             }
         }

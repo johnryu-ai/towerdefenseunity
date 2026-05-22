@@ -226,9 +226,12 @@ namespace TDF.Runtime.Managers
                     );
                     
                     // 메타 재화(로비 상점용 골드 및 젬) 지급
-                    int score = (CurrentGold * 10) + (CurrentHP * 50) + Mathf.Max(0, 10000 - (clearTimeSec * 20));
-                    int rewardGold = score / 10;
-                    int rewardGems = 5;
+                    var scoreSettings = ScoreCalculationSettings.Instance;
+                    int score = (CurrentGold * scoreSettings.goldWeight) + 
+                                (CurrentHP * scoreSettings.hpWeight) + 
+                                Mathf.Max(0, scoreSettings.timeBonusBase - (clearTimeSec * scoreSettings.timeBonusDecay));
+                    int rewardGold = Mathf.FloorToInt(score * scoreSettings.scoreToGoldRatio);
+                    int rewardGems = scoreSettings.rewardGems;
                     UserDataManager.Instance.AddCurrency(gold: rewardGold, gems: rewardGems);
                     
                     UserDataManager.Instance.ClearPlaySession();

@@ -36,6 +36,9 @@ namespace TDF.Editor.Modules
             EditorGUILayout.LabelField("Fire (Burn) Settings", EditorStyles.boldLabel);
             settings.fireBurnDamageRatio = EditorGUILayout.Slider("Damage Per Sec (%)", settings.fireBurnDamageRatio, 0f, 1f);
             settings.fireDuration = EditorGUILayout.FloatField("Duration (Sec)", settings.fireDuration);
+            settings.fireEffectAnimation = (AnimationClip)EditorGUILayout.ObjectField("Fire Effect Animation", settings.fireEffectAnimation, typeof(AnimationClip), false);
+            settings.fireEffectOffset = EditorGUILayout.Vector3Field("Fire Effect Offset", settings.fireEffectOffset);
+            settings.fireEffectScale = EditorGUILayout.Vector3Field("Fire Effect Scale", settings.fireEffectScale);
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space();
@@ -46,6 +49,9 @@ namespace TDF.Editor.Modules
             settings.iceSlowMultiplier = EditorGUILayout.Slider("Movement Speed Multiplier", settings.iceSlowMultiplier, 0.1f, 1f);
             EditorGUILayout.HelpBox($"Target speed will be {settings.iceSlowMultiplier * 100}% of original.", MessageType.Info);
             settings.iceDuration = EditorGUILayout.FloatField("Duration (Sec)", settings.iceDuration);
+            settings.iceEffectAnimation = (AnimationClip)EditorGUILayout.ObjectField("Ice Effect Animation", settings.iceEffectAnimation, typeof(AnimationClip), false);
+            settings.iceEffectOffset = EditorGUILayout.Vector3Field("Ice Effect Offset", settings.iceEffectOffset);
+            settings.iceEffectScale = EditorGUILayout.Vector3Field("Ice Effect Scale", settings.iceEffectScale);
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space();
@@ -56,8 +62,17 @@ namespace TDF.Editor.Modules
             settings.lightningStunDuration = EditorGUILayout.FloatField("Stun Duration (Sec)", settings.lightningStunDuration);
             EditorGUILayout.EndVertical();
 
+            EditorGUILayout.Space();
+
+            // Tower Settings Section
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUILayout.LabelField("Tower Settings", EditorStyles.boldLabel);
+            settings.multiAttackRange = EditorGUILayout.FloatField("Multi Attack Range", settings.multiAttackRange);
+            EditorGUILayout.EndVertical();
+
             if (EditorGUI.EndChangeCheck())
             {
+                settings.ExtractSprites();
                 EditorUtility.SetDirty(settings);
                 AssetDatabase.SaveAssets();
             }

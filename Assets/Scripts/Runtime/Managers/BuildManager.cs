@@ -65,15 +65,25 @@ namespace TDF.Runtime.Managers
             // 팝업이 띄워져 있을 때 클릭 처리
             if (showTowerPopup || (showUpgradePopup && !isTargetingMode))
             {
-                float scaleX = 1920f / Screen.width;
+                float scaleX = 2340f / Screen.width;
                 float scaleY = 1080f / Screen.height;
                 Vector2 guiMousePos = new Vector2(mouseScreenPos.x * scaleX, (Screen.height - mouseScreenPos.y) * scaleY);
 
-                if (showTowerPopup && !popupRect.Contains(guiMousePos))
+                Rect targetRect = new Rect(0, 0, 0, 0);
+                if (showTowerPopup)
+                {
+                    targetRect = GameplayUISettings.Instance != null ? GameplayUISettings.Instance.leftPanelRect : new Rect(0, 135, 150, 945);
+                }
+                else if (showUpgradePopup)
+                {
+                    targetRect = GameplayUISettings.Instance != null ? GameplayUISettings.Instance.rightPanelRect : new Rect(2190, 135, 150, 945);
+                }
+
+                if (showTowerPopup && !targetRect.Contains(guiMousePos))
                 {
                     showTowerPopup = false;
                 }
-                else if (showUpgradePopup && !popupRect.Contains(guiMousePos))
+                else if (showUpgradePopup && !targetRect.Contains(guiMousePos))
                 {
                     showUpgradePopup = false;
                     if (selectedBuiltTower != null) selectedBuiltTower.Deselect();
@@ -206,7 +216,7 @@ namespace TDF.Runtime.Managers
 
         private void OnGUI()
         {
-            Vector2 ratio = new Vector2(Screen.width / 1920f, Screen.height / 1080f);
+            Vector2 ratio = new Vector2(Screen.width / 2340f, Screen.height / 1080f);
             Matrix4x4 oldMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(ratio.x, ratio.y, 1f));
 
@@ -215,7 +225,7 @@ namespace TDF.Runtime.Managers
 
             if (showTowerPopup)
             {
-                popupRect = new Rect(0, 135, 150, 945); // Left Panel
+                popupRect = GameplayUISettings.Instance != null ? GameplayUISettings.Instance.leftPanelRect : new Rect(0, 135, 150, 945); // Left Panel
                 GUILayout.BeginArea(popupRect, "Build", GUI.skin.window);
                 
                 GUILayout.Space(10);
@@ -259,7 +269,7 @@ namespace TDF.Runtime.Managers
             }
             else if (showUpgradePopup && selectedBuiltTower != null)
             {
-                popupRect = new Rect(1770, 135, 150, 945); // Right Panel
+                popupRect = GameplayUISettings.Instance != null ? GameplayUISettings.Instance.rightPanelRect : new Rect(2190, 135, 150, 945); // Right Panel
                 GUILayout.BeginArea(popupRect, "Manage", GUI.skin.window);
                 
                 TowerData data = selectedBuiltTower.GetData();

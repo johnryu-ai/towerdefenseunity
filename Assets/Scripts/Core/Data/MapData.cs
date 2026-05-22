@@ -41,11 +41,11 @@ namespace TDF.Core.Data
     public class MapData : ScriptableObject
     {
         [Header("Grid Size")]
-        public int gridWidth = 12;
+        public int gridWidth = 14;
         public int gridHeight = 8;
 
         [Header("Grid System")]
-        [SerializeField] private TileType[] gridLayout = new TileType[12 * 8];
+        [SerializeField] private TileType[] gridLayout = new TileType[14 * 8];
 
         [Header("Spawn Points & Paths")]
         public List<SpawnPointData> spawnPoints = new List<SpawnPointData>();

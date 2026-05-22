@@ -225,6 +225,8 @@ namespace TDF.Runtime.UI
                         
                         if (btnData.fontAsset != null)
                             txt.font = btnData.fontAsset;
+                        else if (FontSettings.Instance != null && FontSettings.Instance.defaultFont != null)
+                            txt.font = FontSettings.Instance.defaultFont;
                         else
                             txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                     }

@@ -14,6 +14,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TDF.Core.Data.AttackAttributeSettings
   fireBurnDamageRatio: 0.2
   fireDuration: 3
+  fireEffectAnimation: {fileID: 7400000, guid: 025ddf9b17a05c142bed86ff0c6575c1, type: 2}
+  fireEffectOffset: {x: 0.2, y: 0.3, z: 0}
+  fireEffectScale: {x: 0.3, y: 0.3, z: 0}
   iceSlowMultiplier: 0.2
   iceDuration: 3
+  iceEffectAnimation: {fileID: 7400000, guid: f76b38cc9d85ea44595f315346e08cd6, type: 2}
+  iceEffectOffset: {x: 0, y: -0.3, z: 0}
+  iceEffectScale: {x: 0.9, y: 0.3, z: 0}
   lightningStunDuration: 0.1
+  multiAttackRange: 0.7
+  fireSprites:
+  - {fileID: -1213522289889400504, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -1748922003434566145, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -1213522289889400504, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -1748922003434566145, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -1213522289889400504, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 2523527140938298588, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 9034852606066497555, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 2523527140938298588, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 9034852606066497555, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 2523527140938298588, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 9034852606066497555, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -3433455034859093163, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -3433455034859093163, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 8933860122557600062, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -7683824255247675204, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -7683824255247675204, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  fireDurationCalculated: 3
+  iceSprites:
+  - {fileID: 4238734024391222205, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: 7838906041312183082, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -824800354837897009, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  - {fileID: -824800354837897009, guid: 798e66a7ee849bf4899615efc197f127, type: 3}
+  iceDurationCalculated: 3

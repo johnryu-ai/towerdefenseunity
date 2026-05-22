@@ -138,7 +138,7 @@ namespace TDF.Runtime.Entities
                 }
                 else if (attackType == AttackType.Multi)
                 {
-                    ExplodeAreaAt(cachedTransform.position, 0.7f);
+                    ExplodeAreaAt(cachedTransform.position, AttackAttributeSettings.Instance.multiAttackRange);
                     ReturnToPool();
                 }
                 else ReturnToPool();
@@ -164,7 +164,7 @@ namespace TDF.Runtime.Entities
                 {
                     Vector3 impactCenter = targetWorldPos;
                     if (target != null && target.GetFlyType() == MonsterFlyType.Air) impactCenter -= Vector3.up;
-                    ExplodeAreaAt(impactCenter, 0.7f);
+                    ExplodeAreaAt(impactCenter, AttackAttributeSettings.Instance.multiAttackRange);
                     ReturnToPool();
                 }
                 else

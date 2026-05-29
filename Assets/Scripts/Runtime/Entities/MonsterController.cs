@@ -28,6 +28,7 @@ namespace TDF.Runtime.Entities
         private void PlayClip(AnimationClip clip)
         {
             if (clip == null) return;
+            clip.legacy = true; // Force legacy flag so SampleAnimation works on modern AnimationClips at runtime
             if (currentPlayingClip != clip)
             {
                 currentPlayingClip = clip;
@@ -122,6 +123,7 @@ namespace TDF.Runtime.Entities
                 }
                 else if (data.assets.moveAnim != null)
                 {
+                    data.assets.moveAnim.legacy = true;
                     data.assets.moveAnim.SampleAnimation(gameObject, 0f);
                 }
 

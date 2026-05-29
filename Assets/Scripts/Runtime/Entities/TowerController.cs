@@ -2,6 +2,8 @@ using UnityEngine;
 using TDF.Core.Data;
 using TDF.Runtime.Managers;
 using System.Collections.Generic;
+using UnityEngine.Playables;
+using UnityEngine.Animations;
 
 namespace TDF.Runtime.Entities
 {
@@ -31,21 +33,88 @@ namespace TDF.Runtime.Entities
         private static Sprite cachedRangeFillSprite;
         
         private Animator animator;
-        private float animTime = 0f;
         private AnimationClip currentPlayingClip;
+        private PlayableGraph playableGraph;
+        private AnimationClipPlayable clipPlayable;
+        private AnimationPlayableOutput playableOutput;
+        private bool isPlayableActive = false;
+        private bool isAttackingAnimPlaying = false;
+        private float attackAnimTimer = 0f;
+        private AnimationClip lastAttackClip = null;
 
-        private void PlayClip(AnimationClip clip)
+        private void PlayClipWithPlayables(AnimationClip clip, bool loop, bool shouldPlay = true)
         {
             if (clip == null) return;
-            if (currentPlayingClip != clip)
+            
+            if (animator == null)
             {
-                currentPlayingClip = clip;
-                animTime = 0f;
+                animator = GetComponent<Animator>();
+                if (animator == null)
+                {
+                    animator = gameObject.AddComponent<Animator>();
+                }
             }
-            animTime += Time.deltaTime;
-            if (clip.isLooping) animTime %= clip.length;
-            else animTime = Mathf.Clamp(animTime, 0f, clip.length);
-            clip.SampleAnimation(gameObject, animTime);
+            animator.enabled = true;
+
+            if (isPlayableActive && currentPlayingClip == clip && playableGraph.IsValid())
+            {
+                if (shouldPlay && !playableGraph.IsPlaying())
+                {
+                    playableGraph.Play();
+                }
+                else if (!shouldPlay && playableGraph.IsPlaying())
+                {
+                    clipPlayable.SetTime(0.0);
+                    playableGraph.Evaluate();
+                    playableGraph.Stop();
+                }
+                return;
+            }
+
+            CleanUpPlayableGraph();
+
+            currentPlayingClip = clip;
+
+            playableGraph = PlayableGraph.Create("TowerPlayableGraph");
+            playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+
+            playableOutput = AnimationPlayableOutput.Create(playableGraph, "Animation", animator);
+            clipPlayable = AnimationClipPlayable.Create(playableGraph, clip);
+            clipPlayable.SetApplyFootIK(false);
+
+            playableOutput.SetSourcePlayable(clipPlayable);
+            
+            if (shouldPlay)
+            {
+                playableGraph.Play();
+            }
+            else
+            {
+                clipPlayable.SetTime(0.0);
+                playableGraph.Evaluate();
+                playableGraph.Stop();
+            }
+            
+            isPlayableActive = true;
+        }
+
+        private void CleanUpPlayableGraph()
+        {
+            if (isPlayableActive && playableGraph.IsValid())
+            {
+                playableGraph.Destroy();
+            }
+            isPlayableActive = false;
+        }
+
+        private void OnDestroy()
+        {
+            CleanUpPlayableGraph();
+        }
+
+        private void OnDisable()
+        {
+            CleanUpPlayableGraph();
         }
 
         private void Awake()
@@ -189,15 +258,27 @@ namespace TDF.Runtime.Entities
                     sr.material = new Material(Shader.Find("Sprites/Default"));
                     sr.color = Color.white;
                     if (data.assets.idleSprite != null) sr.sprite = data.assets.idleSprite;
-                    else if (data.assets.idleAnim != null) data.assets.idleAnim.SampleAnimation(gameObject, 0f);
+                    else if (data.assets.idleAnim != null)
+                    {
+                        PlayClipWithPlayables(data.assets.idleAnim, true, true);
+                    }
                     UpdateSortingOrder();
                 }
                 Vector3 centerPos = transform.position;
                 transform.position = new Vector3(centerPos.x, centerPos.y - 0.5f + (data.assets.visualScale * 0.5f), centerPos.z);
+                var existingAnimator = GetComponent<Animator>();
                 if (data.assets.animatorController != null)
                 {
-                    if (animator == null) animator = gameObject.AddComponent<Animator>();
+                    if (animator == null) animator = existingAnimator != null ? existingAnimator : gameObject.AddComponent<Animator>();
                     animator.runtimeAnimatorController = data.assets.animatorController;
+                    animator.enabled = true;
+                }
+                else
+                {
+                    if (existingAnimator != null)
+                    {
+                        existingAnimator.enabled = false;
+                    }
                 }
             }
         }
@@ -219,6 +300,20 @@ namespace TDF.Runtime.Entities
         {
             if (GameManager.Instance.CurrentState != GameState.Playing) return;
             if (data == null || data.upgradeTiers.Count == 0) return;
+
+            if (isAttackingAnimPlaying)
+            {
+                attackAnimTimer += Time.deltaTime;
+                float clipLength = lastAttackClip != null ? lastAttackClip.length : 0.2f;
+                if (attackAnimTimer >= clipLength)
+                {
+                    isAttackingAnimPlaying = false;
+                    if (currentTarget == null && currentObstacleTarget == null)
+                    {
+                        RevertToIdle();
+                    }
+                }
+            }
 
             var currentTier = data.upgradeTiers[currentTierIndex];
 
@@ -255,7 +350,10 @@ namespace TDF.Runtime.Entities
 
                 if (!isTargetActive)
                 {
-                    RevertToIdle();
+                    if (!isAttackingAnimPlaying)
+                    {
+                        RevertToIdle();
+                    }
                     if (laserBeam != null) laserBeam.gameObject.SetActive(false);
                     return;
                 }
@@ -265,7 +363,10 @@ namespace TDF.Runtime.Entities
                 {
                     currentTarget = null;
                     currentObstacleTarget = null;
-                    RevertToIdle();
+                    if (!isAttackingAnimPlaying)
+                    {
+                        RevertToIdle();
+                    }
                     if (laserBeam != null) laserBeam.gameObject.SetActive(false);
                     return;
                 }
@@ -314,7 +415,10 @@ namespace TDF.Runtime.Entities
             else
             {
                 if (laserBeam != null) laserBeam.gameObject.SetActive(false);
-                RevertToIdle();
+                if (!isAttackingAnimPlaying)
+                {
+                    RevertToIdle();
+                }
             }
         }
 
@@ -337,16 +441,25 @@ namespace TDF.Runtime.Entities
 
         private void RevertToIdle()
         {
+            currentPlayingClip = null;
+            isAttackingAnimPlaying = false;
+            CleanUpPlayableGraph();
+
             if (data.assets.animatorController != null)
             {
-                if (animator != null) animator.SetBool("IsAttacking", false);
+                if (animator != null)
+                {
+                    animator.enabled = true;
+                    animator.SetBool("IsAttacking", false);
+                }
             }
             else if (data.assets.idleAnim != null)
             {
-                PlayClip(data.assets.idleAnim);
+                PlayClipWithPlayables(data.assets.idleAnim, true, true);
             }
             else if (data.assets != null && data.assets.idleSprite != null)
             {
+                if (animator != null) animator.enabled = false;
                 var sr = GetComponent<SpriteRenderer>();
                 if (sr != null) sr.sprite = data.assets.idleSprite;
             }
@@ -362,23 +475,22 @@ namespace TDF.Runtime.Entities
             float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
             if (angle < 0) angle += 360f;
 
+            AnimationClip clip = null;
             if (data.assets.attackSprites8Dir != null)
             {
                 int octant = Mathf.RoundToInt(angle / 45f) % 8;
-                Sprite s = null;
                 var dirs = data.assets.attackSprites8Dir;
                 switch (octant)
                 {
-                    case 0: s = dirs.right; break;
-                    case 1: s = dirs.upRight; break;
-                    case 2: s = dirs.up; break;
-                    case 3: s = dirs.upLeft; break;
-                    case 4: s = dirs.left; break;
-                    case 5: s = dirs.downLeft; break;
-                    case 6: s = dirs.down; break;
-                    case 7: s = dirs.downRight; break;
+                    case 0: clip = dirs.right; break;
+                    case 1: clip = dirs.upRight; break;
+                    case 2: clip = dirs.up; break;
+                    case 3: clip = dirs.upLeft; break;
+                    case 4: clip = dirs.left; break;
+                    case 5: clip = dirs.downLeft; break;
+                    case 6: clip = dirs.down; break;
+                    case 7: clip = dirs.downRight; break;
                 }
-                if (s != null && data.assets.animatorController == null && data.assets.attackAnim == null) sr.sprite = s;
             }
 
             if (data.assets.animatorController != null)
@@ -391,7 +503,31 @@ namespace TDF.Runtime.Entities
                     animator.SetFloat("Angle", angle);
                 }
             }
-            else if (data.assets.attackAnim != null) PlayClip(data.assets.attackAnim);
+            else if (isAttackingAnimPlaying)
+            {
+                if (clip != null)
+                {
+                    PlayClipWithPlayables(clip, false, true);
+                    lastAttackClip = clip;
+                }
+                else if (data.assets.attackAnim != null)
+                {
+                    PlayClipWithPlayables(data.assets.attackAnim, false, true);
+                    lastAttackClip = data.assets.attackAnim;
+                }
+            }
+            else
+            {
+                if (clip != null)
+                {
+                    PlayClipWithPlayables(clip, false, false);
+                    lastAttackClip = clip;
+                }
+                else
+                {
+                    RevertToIdle();
+                }
+            }
         }
 
         public void SetPriorityTarget(MonsterController monster)
@@ -498,6 +634,16 @@ namespace TDF.Runtime.Entities
         private void FireProjectile()
         {
             if (data.assets == null || (currentTarget == null && currentObstacleTarget == null)) return;
+            
+            isAttackingAnimPlaying = true;
+            attackAnimTimer = 0f;
+
+            if (isPlayableActive && playableGraph.IsValid())
+            {
+                clipPlayable.SetTime(0.0);
+                playableGraph.Play();
+            }
+
             var tier = data.upgradeTiers[currentTierIndex];
             Vector3 tGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
             if (data.attackType == AttackType.AreaSelf && data.assets.projectilePrefab == null)
@@ -506,7 +652,19 @@ namespace TDF.Runtime.Entities
                 return;
             }
             if (data.assets.projectilePrefab == null) return;
-            Vector3 spawnPos = (data.attackType == AttackType.AreaSelf) ? tGroundPos : cachedTransform.position;
+            Vector3 spawnPos;
+            if (data.attackType == AttackType.AreaSelf)
+            {
+                spawnPos = tGroundPos;
+            }
+            else if (data.attackType == AttackType.AreaProjectile)
+            {
+                spawnPos = currentTarget != null ? currentTarget.transform.position : currentObstacleTarget.transform.position;
+            }
+            else
+            {
+                spawnPos = cachedTransform.position;
+            }
             GameObject projObj = ObjectPoolManager.Instance.SpawnFromPool(data.assets.projectilePrefab, spawnPos, Quaternion.identity);
             if (projObj != null)
             {

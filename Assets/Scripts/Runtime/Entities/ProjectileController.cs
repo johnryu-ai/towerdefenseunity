@@ -15,6 +15,7 @@ namespace TDF.Runtime.Entities
         private System.Collections.Generic.List<MonsterController> piercedTargets = new System.Collections.Generic.List<MonsterController>();
         private bool isExploding = false;
         private float targetScale = 1f;
+        private float scaleMultiplier = 1f;
 
         private MonsterController target;
         private ObstacleController obstacleTarget;
@@ -59,7 +60,29 @@ namespace TDF.Runtime.Entities
                 sr.sortingOrder = 30000;
 
                 if (projSprite != null) sr.sprite = projSprite;
-                else if (projAnim != null) projAnim.SampleAnimation(gameObject, 0f);
+                else if (projAnim != null)
+                {
+                    projAnim.legacy = true;
+                    projAnim.SampleAnimation(gameObject, 0f);
+                }
+            }
+
+            Sprite spriteToMeasure = null;
+            if (sr != null) spriteToMeasure = sr.sprite;
+
+            float maxBound = 1f;
+            if (spriteToMeasure != null)
+            {
+                maxBound = Mathf.Max(spriteToMeasure.bounds.size.x, spriteToMeasure.bounds.size.y);
+            }
+
+            if (maxBound > 0.001f)
+            {
+                scaleMultiplier = 1f / maxBound;
+            }
+            else
+            {
+                scaleMultiplier = 1f;
             }
 
             if (attackType == AttackType.LinePiercing && target != null)
@@ -74,6 +97,13 @@ namespace TDF.Runtime.Entities
             {
                 isExploding = true;
                 ExplodeArea(startPos);
+            }
+            else if (attackType == AttackType.AreaProjectile)
+            {
+                isExploding = true;
+                Vector3 explodeCenter = transform.position;
+                if (target != null && target.GetFlyType() == MonsterFlyType.Air) explodeCenter -= Vector3.up;
+                ExplodeArea(explodeCenter);
             }
             else if (target != null)
             {
@@ -90,6 +120,7 @@ namespace TDF.Runtime.Entities
                 animTime += Time.deltaTime;
                 if (currentPlayingClip.isLooping) animTime %= currentPlayingClip.length;
                 else animTime = Mathf.Clamp(animTime, 0f, currentPlayingClip.length);
+                currentPlayingClip.legacy = true;
                 currentPlayingClip.SampleAnimation(gameObject, animTime);
             }
 
@@ -183,15 +214,7 @@ namespace TDF.Runtime.Entities
 
         private void LateUpdate()
         {
-            var sr = GetComponent<SpriteRenderer>();
-            if (sr == null) { transform.localScale = Vector3.one * targetScale; return; }
-            if (sr.sprite != null)
-            {
-                float maxBound = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y);
-                if (maxBound > 0.001f) transform.localScale = Vector3.one * (targetScale / maxBound);
-                else transform.localScale = Vector3.one * targetScale;
-            }
-            else transform.localScale = Vector3.one * targetScale;
+            transform.localScale = Vector3.one * (targetScale * scaleMultiplier);
         }
 
         private void ExplodeArea(Vector3 center)

@@ -18,16 +18,16 @@ MonoBehaviour:
     x: 0
     y: 0
     width: 2340
-    height: 135
+    height: 100
   leftPanelRect:
     serializedVersion: 2
     x: 0
-    y: 135
-    width: 150
-    height: 945
+    y: 100
+    width: 300
+    height: 980
   rightPanelRect:
     serializedVersion: 2
     x: 2190
-    y: 135
+    y: 100
     width: 150
-    height: 945
+    height: 980

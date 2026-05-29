@@ -98,7 +98,7 @@ namespace TDF.Editor.Modules
                     Undo.RecordObject(settings, "Reset UI Settings");
                     settings.backgroundImage = null;
                     settings.topBarRect = new Rect(0, 0, 2340, 135);
-                    settings.leftPanelRect = new Rect(0, 135, 150, 945);
+                    settings.leftPanelRect = new Rect(0, 135, 330, 945);
                     settings.rightPanelRect = new Rect(2190, 135, 150, 945);
                     EditorUtility.SetDirty(settings);
                     AssetDatabase.SaveAssets();

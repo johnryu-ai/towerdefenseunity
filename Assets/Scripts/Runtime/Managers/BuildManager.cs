@@ -20,6 +20,7 @@ namespace TDF.Runtime.Managers
         private bool showUpgradePopup = false;
         private bool isTargetingMode = false;
         private System.Collections.Generic.Dictionary<Vector2Int, Entities.TowerController> builtTowers = new System.Collections.Generic.Dictionary<Vector2Int, Entities.TowerController>();
+        private Vector2 buildScrollPos;
 
         private void Awake()
         {
@@ -230,36 +231,136 @@ namespace TDF.Runtime.Managers
                 
                 GUILayout.Space(10);
 
-                var availableTowers = GameManager.Instance.currentMapData.config.availableTowers;
-                int validTowers = 0;
-                if (availableTowers != null)
+                var sortedTowers = new System.Collections.Generic.List<TowerData>();
+                
+                // 1. 맵에 기본 등록된 타워 추가
+                var rawAvailableTowers = GameManager.Instance.currentMapData?.config?.availableTowers;
+                if (rawAvailableTowers != null)
                 {
-                    foreach (var tower in availableTowers)
+                    foreach (var tower in rawAvailableTowers)
                     {
-                        if (tower != null && UserDataManager.Instance != null && UserDataManager.Instance.IsTowerUnlocked(tower.towerId)) validTowers++;
+                        if (tower != null && !sortedTowers.Contains(tower))
+                        {
+                            sortedTowers.Add(tower);
+                        }
                     }
                 }
-                
-                if (validTowers == 0)
+
+                // 2. 유저가 플레이를 통해 언락한 전체 타워 추가
+                if (UserDataManager.Instance != null)
                 {
-                    GUILayout.Label("No Unlocked Towers", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
+#if UNITY_EDITOR
+                    string[] towerGuids = UnityEditor.AssetDatabase.FindAssets("t:TowerData");
+                    foreach (string guid in towerGuids)
+                    {
+                        string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                        TowerData tower = UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(path);
+                        if (tower != null && UserDataManager.Instance.IsTowerUnlocked(tower.towerId))
+                        {
+                            if (!sortedTowers.Contains(tower))
+                            {
+                                sortedTowers.Add(tower);
+                            }
+                        }
+                    }
+#endif
+                }
+
+                // 3. 타워 ID 순으로 정렬
+                sortedTowers.Sort((a, b) => string.Compare(a.towerId, b.towerId, System.StringComparison.Ordinal));
+
+                if (sortedTowers.Count == 0)
+                {
+                    GUILayout.Label("No Available Towers", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
                 }
                 else
                 {
-                    foreach (var tower in availableTowers)
+                    buildScrollPos = GUILayout.BeginScrollView(buildScrollPos, GUIStyle.none, GUI.skin.verticalScrollbar, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+
+                    float imgSize = 135f;
+                    float colWidth = 135f;
+                    float cellHeight = 170f;
+
+                    for (int i = 0; i < sortedTowers.Count; i += 2)
                     {
-                        if (tower == null) continue;
-                        if (UserDataManager.Instance != null && !UserDataManager.Instance.IsTowerUnlocked(tower.towerId)) continue;
-                        
-                        int cost = tower.upgradeTiers.Count > 0 ? tower.upgradeTiers[0].buildOrUpgradeCost : 0;
-                        if (GUILayout.Button($"{tower.towerName}\n{cost}G", buttonStyle, GUILayout.Height(60)))
+                        GUILayout.BeginHorizontal();
+                        for (int j = 0; j < 2; j++)
                         {
-                            selectedTowerToBuild = tower;
-                            TryBuildTower(clickedX, clickedY);
-                            showTowerPopup = false;
+                            int index = i + j;
+                            if (index < sortedTowers.Count)
+                            {
+                                var tower = sortedTowers[index];
+                                bool isUnlocked = UserDataManager.Instance == null || UserDataManager.Instance.IsTowerUnlocked(tower.towerId);
+                                int cost = tower.upgradeTiers.Count > 0 ? tower.upgradeTiers[0].buildOrUpgradeCost : 0;
+                                bool canAfford = GameManager.Instance.CurrentGold >= cost;
+                                bool canBuild = isUnlocked && canAfford;
+
+                                Color originalColor = GUI.color;
+                                bool originalEnabled = GUI.enabled;
+
+                                if (!canBuild)
+                                {
+                                    GUI.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+                                    GUI.enabled = false;
+                                }
+
+                                Rect cellRect = GUILayoutUtility.GetRect(colWidth, cellHeight);
+                                if (GUI.Button(cellRect, ""))
+                                {
+                                    selectedTowerToBuild = tower;
+                                    TryBuildTower(clickedX, clickedY);
+                                    showTowerPopup = false;
+                                }
+
+                                // Draw sprite on top of the button
+                                Sprite idleSprite = tower.assets != null ? tower.assets.idleSprite : null;
+                                if (idleSprite != null)
+                                {
+                                    Texture2D tex = idleSprite.texture;
+                                    if (tex != null)
+                                    {
+                                        Rect spriteRect = idleSprite.rect;
+                                        Rect texCoords = new Rect(
+                                            spriteRect.x / tex.width,
+                                            spriteRect.y / tex.height,
+                                            spriteRect.width / tex.width,
+                                            spriteRect.height / tex.height
+                                        );
+                                        Rect imgRect = new Rect(cellRect.x + (cellRect.width - imgSize) / 2f, cellRect.y + 5f, imgSize, imgSize);
+                                        GUI.DrawTextureWithTexCoords(imgRect, tex, texCoords);
+                                    }
+                                }
+                                else
+                                {
+                                    Rect placeholderRect = new Rect(cellRect.x + (cellRect.width - imgSize) / 2f, cellRect.y + 5f, imgSize, imgSize);
+                                    GUI.Box(placeholderRect, "?");
+                                }
+
+                                // Draw cost text
+                                GUIStyle priceStyle = new GUIStyle(GUI.skin.label)
+                                {
+                                    alignment = TextAnchor.MiddleCenter,
+                                    fontSize = 16,
+                                    fontStyle = FontStyle.Bold
+                                };
+                                priceStyle.normal.textColor = canBuild ? Color.yellow : Color.gray;
+
+                                Rect textRect = new Rect(cellRect.x, cellRect.y + imgSize + 8f, cellRect.width, 22f);
+                                GUI.Label(textRect, $"{cost}G", priceStyle);
+
+                                GUI.color = originalColor;
+                                GUI.enabled = originalEnabled;
+                            }
+                            else
+                            {
+                                GUILayout.Label("", GUILayout.Width(colWidth), GUILayout.Height(cellHeight));
+                            }
                         }
+                        GUILayout.EndHorizontal();
                         GUILayout.Space(10);
                     }
+
+                    GUILayout.EndScrollView();
                 }
                 
                 GUILayout.FlexibleSpace();

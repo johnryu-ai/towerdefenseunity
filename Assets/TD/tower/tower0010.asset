@@ -49,14 +49,14 @@ MonoBehaviour:
     idleSprite: {fileID: -8502096955618109978, guid: cfca65820e4f7d842af1376f36a96280, type: 3}
     attackSprite: {fileID: -8502096955618109978, guid: cfca65820e4f7d842af1376f36a96280, type: 3}
     attackSprites8Dir:
-      up: {fileID: 5602938150852079413, guid: ad1d993f8409a1e419a86762a022a6cf, type: 3}
-      down: {fileID: -4693954041321589103, guid: 82fd80a3f378908489a588be0244abd0, type: 3}
-      left: {fileID: -4693954041321589103, guid: 82fd80a3f378908489a588be0244abd0, type: 3}
-      right: {fileID: 5602938150852079413, guid: ad1d993f8409a1e419a86762a022a6cf, type: 3}
-      upLeft: {fileID: -4693954041321589103, guid: 82fd80a3f378908489a588be0244abd0, type: 3}
-      upRight: {fileID: 5602938150852079413, guid: ad1d993f8409a1e419a86762a022a6cf, type: 3}
-      downLeft: {fileID: -4693954041321589103, guid: 82fd80a3f378908489a588be0244abd0, type: 3}
-      downRight: {fileID: 5602938150852079413, guid: ad1d993f8409a1e419a86762a022a6cf, type: 3}
+      up: {fileID: 7400000, guid: 4e88217ac6d91204ab85e91679e08c7f, type: 2}
+      down: {fileID: 7400000, guid: 4e88217ac6d91204ab85e91679e08c7f, type: 2}
+      left: {fileID: 7400000, guid: 011969c90b274bfa9d8326cbb2e92c5c, type: 2}
+      right: {fileID: 7400000, guid: 4e88217ac6d91204ab85e91679e08c7f, type: 2}
+      upLeft: {fileID: 7400000, guid: 011969c90b274bfa9d8326cbb2e92c5c, type: 2}
+      upRight: {fileID: 7400000, guid: 4e88217ac6d91204ab85e91679e08c7f, type: 2}
+      downLeft: {fileID: 7400000, guid: 011969c90b274bfa9d8326cbb2e92c5c, type: 2}
+      downRight: {fileID: 7400000, guid: 4e88217ac6d91204ab85e91679e08c7f, type: 2}
     idleAnim: {fileID: 0}
     attackAnim: {fileID: 0}
     animatorController: {fileID: 0}

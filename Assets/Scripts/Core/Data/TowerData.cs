@@ -27,14 +27,14 @@ namespace TDF.Core.Data
     [System.Serializable]
     public class DirectionalSprites
     {
-        [Tooltip("키패드 8")] public Sprite up;
-        [Tooltip("키패드 2")] public Sprite down;
-        [Tooltip("키패드 4")] public Sprite left;
-        [Tooltip("키패드 6")] public Sprite right;
-        [Tooltip("키패드 7")] public Sprite upLeft;
-        [Tooltip("키패드 9")] public Sprite upRight;
-        [Tooltip("키패드 1")] public Sprite downLeft;
-        [Tooltip("키패드 3")] public Sprite downRight;
+        [Tooltip("키패드 8")] public AnimationClip up;
+        [Tooltip("키패드 2")] public AnimationClip down;
+        [Tooltip("키패드 4")] public AnimationClip left;
+        [Tooltip("키패드 6")] public AnimationClip right;
+        [Tooltip("키패드 7")] public AnimationClip upLeft;
+        [Tooltip("키패드 9")] public AnimationClip upRight;
+        [Tooltip("키패드 1")] public AnimationClip downLeft;
+        [Tooltip("키패드 3")] public AnimationClip downRight;
     }
 
     [System.Serializable]

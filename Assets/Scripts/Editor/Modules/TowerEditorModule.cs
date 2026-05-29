@@ -134,6 +134,19 @@ namespace TDF.Editor.Modules
             
             assets.idleSprite = (Sprite)EditorGUILayout.ObjectField("Idle Sprite", assets.idleSprite, typeof(Sprite), false);
             assets.attackSprite = (Sprite)EditorGUILayout.ObjectField("Attack Sprite", assets.attackSprite, typeof(Sprite), false);
+            
+            if (assets.attackSprites8Dir == null) assets.attackSprites8Dir = new DirectionalSprites();
+            var dirs = assets.attackSprites8Dir;
+            GUILayout.Label("8-Direction Attack Animations", EditorStyles.boldLabel);
+            dirs.up = (AnimationClip)EditorGUILayout.ObjectField("Up (8)", dirs.up, typeof(AnimationClip), false);
+            dirs.down = (AnimationClip)EditorGUILayout.ObjectField("Down (2)", dirs.down, typeof(AnimationClip), false);
+            dirs.left = (AnimationClip)EditorGUILayout.ObjectField("Left (4)", dirs.left, typeof(AnimationClip), false);
+            dirs.right = (AnimationClip)EditorGUILayout.ObjectField("Right (6)", dirs.right, typeof(AnimationClip), false);
+            dirs.upLeft = (AnimationClip)EditorGUILayout.ObjectField("Up-Left (7)", dirs.upLeft, typeof(AnimationClip), false);
+            dirs.upRight = (AnimationClip)EditorGUILayout.ObjectField("Up-Right (9)", dirs.upRight, typeof(AnimationClip), false);
+            dirs.downLeft = (AnimationClip)EditorGUILayout.ObjectField("Down-Left (1)", dirs.downLeft, typeof(AnimationClip), false);
+            dirs.downRight = (AnimationClip)EditorGUILayout.ObjectField("Down-Right (3)", dirs.downRight, typeof(AnimationClip), false);
+            
             assets.idleAnim = (AnimationClip)EditorGUILayout.ObjectField("Idle Anim", assets.idleAnim, typeof(AnimationClip), false);
             assets.attackAnim = (AnimationClip)EditorGUILayout.ObjectField("Attack Anim", assets.attackAnim, typeof(AnimationClip), false);
             assets.prefab = (GameObject)EditorGUILayout.ObjectField("Tower Prefab", assets.prefab, typeof(GameObject), false);

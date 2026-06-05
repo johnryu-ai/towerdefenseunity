@@ -137,6 +137,8 @@ namespace TDF.Editor.Modules
             assets.hitSprite = (Sprite)EditorGUILayout.ObjectField("Hit Sprite", assets.hitSprite, typeof(Sprite), false);
             assets.dieSprite = (Sprite)EditorGUILayout.ObjectField("Die Sprite", assets.dieSprite, typeof(Sprite), false);
             assets.moveAnim = (AnimationClip)EditorGUILayout.ObjectField("Move Animation", assets.moveAnim, typeof(AnimationClip), false);
+            assets.visualScale = EditorGUILayout.FloatField("Visual Scale (Tile)", assets.visualScale);
+            assets.visualOffsetY = EditorGUILayout.FloatField("Visual Offset Y", assets.visualOffsetY);
             assets.prefab = (GameObject)EditorGUILayout.ObjectField("Monster Prefab", assets.prefab, typeof(GameObject), false);
 
             if (EditorGUI.EndChangeCheck())

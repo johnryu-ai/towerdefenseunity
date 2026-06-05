@@ -140,7 +140,7 @@ namespace TDF.Runtime.Entities
 
                 // 하단 정렬 (발 위치를 타일 하단에 맞춤)
                 float safeScale = data.assets.visualScale <= 0.01f ? 1f : data.assets.visualScale;
-                float yOffset = -0.5f + (safeScale * 0.5f);
+                float yOffset = -0.5f + (safeScale * 0.5f) + (data.assets.visualOffsetY - 1.0f);
                 if (data.flyType == MonsterFlyType.Air)
                 {
                     yOffset += 1.0f; // 공중 몬스터는 한칸 위
@@ -322,8 +322,8 @@ namespace TDF.Runtime.Entities
             // 그림자 월드 위치 및 크기 강제 고정 (부모 스케일의 영향을 무시하고 항상 경로상에 표시)
             if (shadowObj != null && shadowObj.activeSelf)
             {
-                // 공중 유닛의 이미지(transform.position)는 현재 고도(currentAltitude)만큼 떠있으므로, 그만큼 빼주면 바닥임
-                shadowObj.transform.position = transform.position - (Vector3.up * currentAltitude);
+                // 공중 유닛의 이미지(transform.position)는 현재 고도(currentAltitude)만큼 떠있으므로, 그만큼 빼주고 visualOffsetY도 보정해줌
+                shadowObj.transform.position = transform.position - (Vector3.up * currentAltitude) - (Vector3.up * (data.assets.visualOffsetY - 1.0f));
                 
                 // 1칸 격자를 넘지 않는 좌우로 긴 반투명 회색 타원 (스프라이트가 0.64크기이므로 1.4배하면 0.9정도, 높이는 0.3배하면 0.2정도)
                 // 부모의 로컬 스케일에 반비례하게 적용하여 월드 크기를 1칸 내로 항상 일정하게 유지

@@ -22,6 +22,10 @@ namespace TDF.Core.Data
         [Header("Visuals")]
         public Sprite projectileSprite; // 업그레이드 상태별 발사체 이미지
         public AnimationClip projectileAnim; // 발사체 애니메이션 (단일 파일)
+
+        [Header("Tier Visuals")]
+        public Sprite tierSprite; // 티어별 이미지 (앞쪽 하단 표시용)
+        public float tierScale = 1.0f; // 티어 이미지 크기 배율 (기본값 1.0)
     }
 
     [System.Serializable]
@@ -52,6 +56,7 @@ namespace TDF.Core.Data
         
         [Header("Scale")]
         public float visualScale = 1.0f; // 타일 기준 크기 조절 (1.0 = 타일 크기)
+        public float visualOffsetY = 1.0f; // 비주얼 Y축 오프셋 (기본값 1.0)
         public float projectileScale = 0.5f; // 발사체 크기 조절 (0.5 = 반 타일 크기)
     }
 

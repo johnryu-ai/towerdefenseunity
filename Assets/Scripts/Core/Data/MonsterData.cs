@@ -28,6 +28,7 @@ namespace TDF.Core.Data
 
         [Header("Scale")]
         public float visualScale = 1.0f; // 타일 기준 크기 조절 (1.0 = 타일 크기)
+        public float visualOffsetY = 1.0f; // 비주얼 Y축 오프셋 (기본값 1.0)
     }
 
     [System.Serializable]

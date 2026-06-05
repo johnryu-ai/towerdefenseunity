@@ -41,6 +41,7 @@ namespace TDF.Runtime.Entities
         private bool isAttackingAnimPlaying = false;
         private float attackAnimTimer = 0f;
         private AnimationClip lastAttackClip = null;
+        private SpriteRenderer tierVisualRenderer;
 
         private void PlayClipWithPlayables(AnimationClip clip, bool loop, bool shouldPlay = true)
         {
@@ -207,7 +208,7 @@ namespace TDF.Runtime.Entities
                 currentRangeLine.gameObject.SetActive(true);
                 
                 // 채우기 영역 활성화 및 스케일 조정 (Sprite 기본 크기 1x1 가정)
-                currentRangeFill.transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+                currentRangeFill.transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f) - (data.assets.visualOffsetY - 1.0f), transform.position.z);
                 currentRangeFill.transform.localScale = Vector3.one * (currentRange * 2f);
                 currentRangeFill.gameObject.SetActive(true);
 
@@ -228,7 +229,7 @@ namespace TDF.Runtime.Entities
         {
             float x, y;
             float angle = 0f;
-            Vector3 center = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+            Vector3 center = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f) - (data.assets.visualOffsetY - 1.0f), transform.position.z);
             for (int i = 0; i < 51; i++)
             {
                 x = Mathf.Sin(Mathf.Deg2Rad * angle) * radius;
@@ -265,7 +266,7 @@ namespace TDF.Runtime.Entities
                     UpdateSortingOrder();
                 }
                 Vector3 centerPos = transform.position;
-                transform.position = new Vector3(centerPos.x, centerPos.y - 0.5f + (data.assets.visualScale * 0.5f), centerPos.z);
+                transform.position = new Vector3(centerPos.x, centerPos.y - 0.5f + (data.assets.visualScale * 0.5f) + (data.assets.visualOffsetY - 1.0f), centerPos.z);
                 var existingAnimator = GetComponent<Animator>();
                 if (data.assets.animatorController != null)
                 {
@@ -280,9 +281,44 @@ namespace TDF.Runtime.Entities
                         existingAnimator.enabled = false;
                     }
                 }
+                
+                UpdateTierVisual(currentTierIndex);
             }
         }
 
+        private void UpdateTierVisual(int tierIndex)
+        {
+            if (data == null || data.upgradeTiers == null || tierIndex >= data.upgradeTiers.Count) return;
+            var tier = data.upgradeTiers[tierIndex];
+
+            if (tierVisualRenderer == null)
+            {
+                Transform tierVisualTransform = transform.Find("TierVisual");
+                if (tierVisualTransform != null)
+                {
+                    tierVisualRenderer = tierVisualTransform.GetComponent<SpriteRenderer>();
+                }
+                else
+                {
+                    GameObject tierVisualObj = new GameObject("TierVisual");
+                    tierVisualObj.transform.SetParent(transform);
+                    tierVisualRenderer = tierVisualObj.AddComponent<SpriteRenderer>();
+                }
+            }
+
+            if (tier.tierSprite != null)
+            {
+                tierVisualRenderer.gameObject.SetActive(true);
+                tierVisualRenderer.sprite = tier.tierSprite;
+                tierVisualRenderer.material = new Material(Shader.Find("Sprites/Default"));
+            }
+            else
+            {
+                tierVisualRenderer.gameObject.SetActive(false);
+            }
+            UpdateSortingOrder();
+        }
+        
         private void UpdateSortingOrder()
         {
             var sr = GetComponent<SpriteRenderer>();
@@ -292,6 +328,10 @@ namespace TDF.Runtime.Entities
                 if (laserBeam != null)
                 {
                     laserBeam.sortingOrder = sr.sortingOrder - 1;
+                }
+                if (tierVisualRenderer != null)
+                {
+                    tierVisualRenderer.sortingOrder = sr.sortingOrder + 10;
                 }
             }
         }
@@ -358,7 +398,7 @@ namespace TDF.Runtime.Entities
                     return;
                 }
 
-                Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+                Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f) - (data.assets.visualOffsetY - 1.0f), transform.position.z);
                 if (Vector2.SqrMagnitude(towerGroundPos - targetPos) > currentTier.range * currentTier.range)
                 {
                     currentTarget = null;
@@ -434,6 +474,26 @@ namespace TDF.Runtime.Entities
                     {
                         float currentScale = data.assets.visualScale / maxBound;
                         transform.localScale = Vector3.one * currentScale;
+
+                        if (tierVisualRenderer != null && tierVisualRenderer.gameObject.activeSelf && tierVisualRenderer.sprite != null)
+                        {
+                            float tierMaxBound = Mathf.Max(tierVisualRenderer.sprite.bounds.size.x, tierVisualRenderer.sprite.bounds.size.y);
+                            if (tierMaxBound > 0.001f)
+                            {
+                                var currentTier = data.upgradeTiers[currentTierIndex];
+                                float targetLocalScale = currentTier.tierScale / (currentScale * tierMaxBound);
+                                tierVisualRenderer.transform.localScale = Vector3.one * targetLocalScale;
+
+                                // 부모 타워의 배치 좌표(yOffset)를 활용해 원래 타일 격자의 월드 중심점 복원
+                                float yOffset = -0.5f + (data.assets.visualScale * 0.5f) + (data.assets.visualOffsetY - 1.0f);
+                                Vector3 gridCenter = new Vector3(transform.position.x, transform.position.y - yOffset, transform.position.z);
+
+                                // 월드 좌표 기준으로 우측 하단 구석에 티어 스프라이트 배치 (넘침 방지)
+                                float targetWorldX = gridCenter.x + 0.5f - (currentTier.tierScale * 0.5f);
+                                float targetWorldY = gridCenter.y - 0.5f + (currentTier.tierScale * 0.5f);
+                                tierVisualRenderer.transform.position = new Vector3(targetWorldX, targetWorldY, gridCenter.z);
+                            }
+                        }
                     }
                 }
             }
@@ -559,7 +619,7 @@ namespace TDF.Runtime.Entities
         {
             MonsterController closestMonster = null;
             float sqrRange = range * range;
-            Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+            Vector3 towerGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f) - (data.assets.visualOffsetY - 1.0f), transform.position.z);
 
             // 0. 우선 순위 타겟 확인
             if (priorityTarget != null && priorityTarget.gameObject.activeInHierarchy)
@@ -645,7 +705,7 @@ namespace TDF.Runtime.Entities
             }
 
             var tier = data.upgradeTiers[currentTierIndex];
-            Vector3 tGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f), transform.position.z);
+            Vector3 tGroundPos = new Vector3(transform.position.x, transform.position.y + 0.5f - (data.assets.visualScale * 0.5f) - (data.assets.visualOffsetY - 1.0f), transform.position.z);
             if (data.attackType == AttackType.AreaSelf && data.assets.projectilePrefab == null)
             {
                 ExplodeAreaSelf(tGroundPos, tier.range, tier.damage);
@@ -737,6 +797,7 @@ namespace TDF.Runtime.Entities
             if (GameManager.Instance.UseGold(nextCost))
             {
                 currentTierIndex++;
+                UpdateTierVisual(currentTierIndex);
                 return true;
             }
             return false;

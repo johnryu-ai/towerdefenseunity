@@ -109,6 +109,11 @@ namespace TDF.Editor.Modules
                 tier.manaCost = EditorGUILayout.FloatField("Mana Cost", tier.manaCost);
                 GUILayout.EndHorizontal();
 
+                GUILayout.BeginHorizontal();
+                tier.tierSprite = (Sprite)EditorGUILayout.ObjectField("Tier Sprite", tier.tierSprite, typeof(Sprite), false);
+                tier.tierScale = EditorGUILayout.FloatField("Tier Scale", tier.tierScale);
+                GUILayout.EndHorizontal();
+
                 if (EditorGUI.EndChangeCheck())
                 {
                     Undo.RecordObject(targetTower, "Edit Tier");
@@ -149,6 +154,8 @@ namespace TDF.Editor.Modules
             
             assets.idleAnim = (AnimationClip)EditorGUILayout.ObjectField("Idle Anim", assets.idleAnim, typeof(AnimationClip), false);
             assets.attackAnim = (AnimationClip)EditorGUILayout.ObjectField("Attack Anim", assets.attackAnim, typeof(AnimationClip), false);
+            assets.visualScale = EditorGUILayout.FloatField("Visual Scale (Tile)", assets.visualScale);
+            assets.visualOffsetY = EditorGUILayout.FloatField("Visual Offset Y", assets.visualOffsetY);
             assets.prefab = (GameObject)EditorGUILayout.ObjectField("Tower Prefab", assets.prefab, typeof(GameObject), false);
             assets.projectilePrefab = (GameObject)EditorGUILayout.ObjectField("Projectile Prefab", assets.projectilePrefab, typeof(GameObject), false);
             assets.hitEffectPrefab = (GameObject)EditorGUILayout.ObjectField("Hit Effect Prefab", assets.hitEffectPrefab, typeof(GameObject), false);

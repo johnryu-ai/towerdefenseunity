@@ -23,28 +23,49 @@ MonoBehaviour:
     range: 1.5
     damage: 10
     attackSpeed: 1
+    projectileSpeed: 10
     sellPrice: 80
     manaCost: 0
     projectileSprite: {fileID: 1797201128194229901, guid: c729125eac6875e4e813dd8321ea969d, type: 3}
     projectileAnim: {fileID: 0}
+    tierSprite: {fileID: -3054817341161908102, guid: 69dab7f0c9b8289459bf5f3065781c8a, type: 3}
+    tierScale: 0.3
   - tierLevel: 1
     buildOrUpgradeCost: 100
     range: 2
     damage: 15
     attackSpeed: 2
+    projectileSpeed: 10
     sellPrice: 160
     manaCost: 0
     projectileSprite: {fileID: 0}
     projectileAnim: {fileID: 7400000, guid: c510a206b20ace242b5321130662c6dd, type: 2}
+    tierSprite: {fileID: -1707461662262659755, guid: 69dab7f0c9b8289459bf5f3065781c8a, type: 3}
+    tierScale: 0.3
   - tierLevel: 2
     buildOrUpgradeCost: 120
     range: 2.5
     damage: 20
     attackSpeed: 3
+    projectileSpeed: 10
     sellPrice: 256
     manaCost: 0
     projectileSprite: {fileID: 0}
     projectileAnim: {fileID: 0}
+    tierSprite: {fileID: -1707461662262659755, guid: 69dab7f0c9b8289459bf5f3065781c8a, type: 3}
+    tierScale: 0.3
+  - tierLevel: 2
+    buildOrUpgradeCost: 120
+    range: 2.5
+    damage: 20
+    attackSpeed: 3
+    projectileSpeed: 10
+    sellPrice: 256
+    manaCost: 0
+    projectileSprite: {fileID: 0}
+    projectileAnim: {fileID: 0}
+    tierSprite: {fileID: -4231477485293977030, guid: 69dab7f0c9b8289459bf5f3065781c8a, type: 3}
+    tierScale: 0.3
   assets:
     idleSprite: {fileID: -8502096955618109978, guid: cfca65820e4f7d842af1376f36a96280, type: 3}
     attackSprite: {fileID: -8502096955618109978, guid: cfca65820e4f7d842af1376f36a96280, type: 3}
@@ -63,5 +84,6 @@ MonoBehaviour:
     prefab: {fileID: 8503058417635802521, guid: e37fbed6e9a3b9a41952760d9f5b8c4b, type: 3}
     projectilePrefab: {fileID: 3469892883378385654, guid: c394c0e60ad317142af972e7099c2a17, type: 3}
     hitEffectPrefab: {fileID: 0}
-    visualScale: 1.2
-    projectileScale: 0.5
+    visualScale: 1.6
+    visualOffsetY: 0.8
+    projectileScale: 0.6

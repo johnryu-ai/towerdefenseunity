@@ -298,6 +298,14 @@ namespace TDF.Runtime.Managers
         {
             Debug.Log($"[LobbyManager] OpenPage requested: {type}");
 
+            // Shop의 경우 에셋에 의한 동적 생성 레이아웃(power buff 등)을 무시하고, IMGUI 3개 탭 상점 씬으로 강제 전환합니다.
+            if (type == PageType.Shop)
+            {
+                Debug.Log("[LobbyManager] Shop page requested. Force scene load: Lobby_Shop");
+                SceneManager.LoadScene("Lobby_Shop");
+                return;
+            }
+
             PageData data = allPages != null ? allPages.Find(p => p.pageType == type) : null;
             
             // 프리팹이나 레이아웃 에셋이 전혀 없는 상태인지 확인 (데이터는 있지만 알맹이가 없는 경우)
@@ -309,7 +317,6 @@ namespace TDF.Runtime.Managers
                 // Fallback: 표시할 UI가 전혀 없으면 해당 씬(Lobby_XXX)으로 직접 전환을 시도합니다. (레거시/서브씬 호환)
                 string targetScene = "Main";
                 if (type == PageType.StageSelect) targetScene = "Lobby_Stage";
-                else if (type == PageType.Shop) targetScene = "Lobby_Shop";
                 else if (type == PageType.Achievement) targetScene = "Lobby_Achievement";
                 else if (type == PageType.Leaderboard) targetScene = "Lobby_Leaderboard";
                 else if (type == PageType.Event) targetScene = "Lobby_Event";

@@ -295,7 +295,8 @@ namespace TDF.Runtime.Managers
                 towerId    = towerId,
                 unlockedAt = DateTime.Now.ToString("o"),
                 unlockedBy = unlockedBy,
-                sourceId   = sourceId
+                sourceId   = sourceId,
+                towerPoint = 1
             });
             Save();
         }
@@ -468,6 +469,63 @@ namespace TDF.Runtime.Managers
                 Save();
             }
             return true;
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 업그레이드 포인트 (Upgrade Points) & 상점 포인트 (Shop Points)
+        // ══════════════════════════════════════════════════════════════════
+
+        public int PlayerUpgradePoints => saveData.upgradePoints;
+        public int PlayerShopPoints => saveData.shopPoints;
+
+        /// <summary>업그레이드 포인트를 획득한다.</summary>
+        public void AddUpgradePoints(int amount)
+        {
+            saveData.upgradePoints += amount;
+            Save();
+            Debug.Log($"[UserDataManager] 업그레이드 포인트 획득: +{amount}. 현재 보유: {saveData.upgradePoints}");
+        }
+
+        /// <summary>업그레이드 포인트를 소모한다. 보유 포인트가 부족하면 false.</summary>
+        public bool SpendUpgradePoints(int amount)
+        {
+            if (saveData.upgradePoints < amount) return false;
+            saveData.upgradePoints -= amount;
+            Save();
+            Debug.Log($"[UserDataManager] 업그레이드 포인트 소모: -{amount}. 현재 보유: {saveData.upgradePoints}");
+            return true;
+        }
+
+        /// <summary>상점 포인트를 획득한다.</summary>
+        public void AddShopPoints(int amount)
+        {
+            saveData.shopPoints += amount;
+            Save();
+            Debug.Log($"[UserDataManager] 상점 포인트 획득: +{amount}. 현재 보유: {saveData.shopPoints}");
+        }
+
+        /// <summary>특정 타워의 타워 포인트를 조회한다. 언락되지 않은 타워면 기본값 1을 반환한다.</summary>
+        public int GetTowerPoint(string towerId)
+        {
+            var record = saveData.unlockedTowers.Find(t => t.towerId == towerId);
+            if (record == null) return 1;
+            return Mathf.Max(1, record.towerPoint);
+        }
+
+        /// <summary>특정 타워의 타워 포인트를 직접 설정한다.</summary>
+        public void SetTowerPoint(string towerId, int val)
+        {
+            var record = saveData.unlockedTowers.Find(t => t.towerId == towerId);
+            if (record != null)
+            {
+                record.towerPoint = val;
+                Save();
+                Debug.Log($"[UserDataManager] 타워({towerId})의 포인트 설정: {val}");
+            }
+            else
+            {
+                Debug.LogWarning($"[UserDataManager] 언락되지 않은 타워 {towerId}의 포인트를 설정할 수 없습니다.");
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════

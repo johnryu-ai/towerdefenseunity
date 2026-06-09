@@ -52,7 +52,7 @@ MonoBehaviour:
     manaCost: 0
     projectileSprite: {fileID: 0}
     projectileAnim: {fileID: 0}
-    tierSprite: {fileID: -1707461662262659755, guid: 69dab7f0c9b8289459bf5f3065781c8a, type: 3}
+    tierSprite: {fileID: -4231477485293977030, guid: 69dab7f0c9b8289459bf5f3065781c8a, type: 3}
     tierScale: 0.3
   - tierLevel: 2
     buildOrUpgradeCost: 120

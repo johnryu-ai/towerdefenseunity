@@ -61,12 +61,18 @@ namespace TDF.Editor.Modules
             var newAttr = (AttackAttribute)EditorGUILayout.EnumPopup("Attack Attribute", targetTower.attackAttribute);
             var newType = (AttackType)EditorGUILayout.EnumPopup("Attack Type", targetTower.attackType);
             var newTarget = (TargetType)EditorGUILayout.EnumPopup("Target Type", targetTower.targetType);
+            float newMaxHp = EditorGUILayout.FloatField("Max HP", targetTower.maxHp);
+            var newRarity = (TowerRarity)EditorGUILayout.EnumPopup("Tower Rarity (R/SR/SSR/SP)", targetTower.rarity);
+            int newTowerPoint = EditorGUILayout.IntField("Tower Point (1~7)", targetTower.towerPoint);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(targetTower, "Edit Tower Properties");
                 targetTower.attackAttribute = newAttr;
                 targetTower.attackType = newType;
                 targetTower.targetType = newTarget;
+                targetTower.maxHp = newMaxHp;
+                targetTower.rarity = newRarity;
+                targetTower.towerPoint = newTowerPoint;
             }
         }
 
@@ -114,6 +120,8 @@ namespace TDF.Editor.Modules
                 tier.tierScale = EditorGUILayout.FloatField("Tier Scale", tier.tierScale);
                 GUILayout.EndHorizontal();
 
+
+
                 if (EditorGUI.EndChangeCheck())
                 {
                     Undo.RecordObject(targetTower, "Edit Tier");
@@ -159,6 +167,10 @@ namespace TDF.Editor.Modules
             assets.prefab = (GameObject)EditorGUILayout.ObjectField("Tower Prefab", assets.prefab, typeof(GameObject), false);
             assets.projectilePrefab = (GameObject)EditorGUILayout.ObjectField("Projectile Prefab", assets.projectilePrefab, typeof(GameObject), false);
             assets.hitEffectPrefab = (GameObject)EditorGUILayout.ObjectField("Hit Effect Prefab", assets.hitEffectPrefab, typeof(GameObject), false);
+
+            GUILayout.Label("Lobby Assets", EditorStyles.boldLabel);
+            assets.lobbySprite = (Sprite)EditorGUILayout.ObjectField("Lobby Sprite", assets.lobbySprite, typeof(Sprite), false);
+            assets.lobbyAnim = (AnimationClip)EditorGUILayout.ObjectField("Lobby Anim", assets.lobbyAnim, typeof(AnimationClip), false);
 
             if (EditorGUI.EndChangeCheck())
             {

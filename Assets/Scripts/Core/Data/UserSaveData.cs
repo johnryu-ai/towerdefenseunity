@@ -81,6 +81,7 @@ namespace TDF.Core.Data
         public string unlockedAt;        // ISO 날짜 문자열
         public string unlockedBy;        // TowerUnlockSource 상수
         public string sourceId;          // 스테이지명 / 업적ID / 구매ID 등
+        public int towerPoint = 1;       // 타워 성장 포인트 (최대 7)
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -130,6 +131,8 @@ namespace TDF.Core.Data
         [Header("Currency")]
         public int  playerGold = 0;   // 골드 (인게임 재화)
         public int  playerGems = 0;   // 크리스탈 (프리미엄 재화 / 업적 보상)
+        public int  upgradePoints = 0; // 업그레이드 포인트 (타워 업그레이드용)
+        public int  shopPoints = 0;    // 상점 포인트 (중복 타워 환전 포인트)
 
         public string lastSavedAt;
     }

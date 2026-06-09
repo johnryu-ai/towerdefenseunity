@@ -42,6 +42,7 @@ namespace TDF.Runtime.Entities
         private float attackAnimTimer = 0f;
         private AnimationClip lastAttackClip = null;
         private SpriteRenderer tierVisualRenderer;
+        private float currentHp;
 
         private void PlayClipWithPlayables(AnimationClip clip, bool loop, bool shouldPlay = true)
         {
@@ -250,6 +251,7 @@ namespace TDF.Runtime.Entities
             GridY = gridY;
             cachedTransform = transform;
             if (laserBeam != null) laserBeam.gameObject.SetActive(false);
+            if (data != null) currentHp = data.maxHp;
             
             if (data.assets != null)
             {
@@ -793,7 +795,23 @@ namespace TDF.Runtime.Entities
         public bool UpgradeTower()
         {
             if (currentTierIndex >= data.upgradeTiers.Count - 1) return false;
-            int nextCost = data.upgradeTiers[currentTierIndex + 1].buildOrUpgradeCost;
+            
+            // towerPoint 값에 따른 최대 업그레이드 가능 티어 매핑
+            int userTowerPoint = UserDataManager.Instance != null ? UserDataManager.Instance.GetTowerPoint(data.towerId) : data.towerPoint;
+            int maxUpgradeTier = 0;
+            if (userTowerPoint <= 1) maxUpgradeTier = 0;
+            else if (userTowerPoint <= 3) maxUpgradeTier = 1;
+            else if (userTowerPoint <= 6) maxUpgradeTier = 2;
+            else maxUpgradeTier = 3;
+
+            if (currentTierIndex >= maxUpgradeTier)
+            {
+                Debug.LogWarning($"[TowerController] 타워 포인트 제한으로 인해 더 이상 업그레이드할 수 없습니다. 타워 포인트: {userTowerPoint}, 현재 티어: {currentTierIndex}, 최대 티어: {maxUpgradeTier}");
+                return false;
+            }
+
+            var nextTier = data.upgradeTiers[currentTierIndex + 1];
+            int nextCost = nextTier.buildOrUpgradeCost;
             if (GameManager.Instance.UseGold(nextCost))
             {
                 currentTierIndex++;

@@ -6,6 +6,7 @@ namespace TDF.Core.Data
     public enum AttackAttribute { Normal, Fire, Cold, Electric, Buff, Resource }
     public enum AttackType { Single, LinePiercing, AreaSelf, AreaProjectile, ContinuousHoming, Multi }
     public enum TargetType { Ground, Flying, Both, Special }
+    public enum TowerRarity { R, SR, SSR, SP }
 
     [System.Serializable]
     public class TowerUpgradeTier
@@ -53,6 +54,10 @@ namespace TDF.Core.Data
         public GameObject prefab;
         public GameObject projectilePrefab; // 기본 발사체 프리팹 (스프라이트는 tier에서 오버라이드)
         public GameObject hitEffectPrefab;
+
+        [Header("Lobby Assets")]
+        public Sprite lobbySprite; // 로비 화면용 타워 이미지
+        public AnimationClip lobbyAnim; // 로비 화면용 타워 애니메이션
         
         [Header("Scale")]
         public float visualScale = 1.0f; // 타일 기준 크기 조절 (1.0 = 타일 크기)
@@ -71,6 +76,9 @@ namespace TDF.Core.Data
         public AttackAttribute attackAttribute = AttackAttribute.Normal;
         public AttackType attackType = AttackType.Single;
         public TargetType targetType = TargetType.Both;
+        public float maxHp = 100f; // 타워 최대 HP
+        public TowerRarity rarity = TowerRarity.R; // 타워 희귀도 등급
+        public int towerPoint = 1; // 타워 포인트 속성
 
         [Header("Upgrade Tiers (0~3)")]
         public List<TowerUpgradeTier> upgradeTiers = new List<TowerUpgradeTier>();

@@ -18,7 +18,6 @@ namespace TDF.Core.Data
         public int initialGold = 100;
         public int initialLives = 20;
         public List<TowerData> availableTowers = new List<TowerData>();
-        public int maxUpgradeLevel = 3;
     }
 
     [System.Serializable]

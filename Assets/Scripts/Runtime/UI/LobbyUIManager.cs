@@ -28,6 +28,9 @@ namespace TDF.Runtime.UI
         private Vector2     scroll          = Vector2.zero;
         private List<string> gachaResults   = new List<string>();
 
+        // 상점 탭 구분 (0: 젬 상점, 1: 타워 뽑기, 2: 포인트 상점)
+        private int         shopTab         = 0;
+
         // ── GUI 스타일 ────────────────────────────────────────────────────
         private GUIStyle _title, _btn, _smallBtn, _label, _bar;
         private bool     _stylesReady;
@@ -498,94 +501,233 @@ namespace TDF.Runtime.UI
             Header("🛒  상점 & 소환");
             CurrencyBar();
 
-            // ── 좌측: 일반 상품 판매 ───────────────────────────────
-            float leftW = 850f, rowH = 130f, padX = 160f, startY = 130f;
+            float padX = 160f, startY = 130f, panelW = 1600f, panelH = 830f;
             
-            GUI.Box(new Rect(padX, startY, leftW, 830f), "일반 상품", new GUIStyle(GUI.skin.box) { fontSize = 24, fontStyle = FontStyle.Bold });
-
-            scroll = GUI.BeginScrollView(new Rect(padX + 10f, startY + 40f, leftW - 20f, 770f),
-                scroll, new Rect(0, 0, leftW - 50f, Mathf.Max(770f, shopItems.Count * (rowH + 10f))));
-
-            for (int i = 0; i < shopItems.Count; i++)
+            // ── 상단 탭 버튼 배치 ──────────────────────────────────
+            float tabW = panelW / 3f;
+            string[] tabs = { "젬 상점", "타워 뽑기", "포인트 상점" };
+            for (int i = 0; i < 3; i++)
             {
-                var item = shopItems[i];
-                if (item == null) continue;
-                float y = i * (rowH + 10f);
-
-                GUI.color = new Color(0.14f, 0.14f, 0.22f);
-                GUI.DrawTexture(new Rect(0, y, leftW - 50f, rowH), Texture2D.whiteTexture);
-                GUI.color = Color.white;
-
-                GUI.Label(new Rect(20, y + 10, 500, 50),  item.itemName,    _label);
-                GUI.Label(new Rect(20, y + 60, 500, 50),  item.description, new GUIStyle(_label) { fontSize = 22 });
-
-                bool bought = UserDataManager.Instance?.HasPurchased(item.itemId) ?? false;
-                string costLabel = $"💎{item.costGems}";
-
-                if (bought)
+                var tabStyle = new GUIStyle(GUI.skin.button) { fontSize = 28, fontStyle = FontStyle.Bold };
+                if (shopTab == i)
                 {
-                    GUI.color = Color.gray;
-                    GUI.Button(new Rect(leftW - 320f, y + 30, 250, 70), "구매 완료", _smallBtn);
-                    GUI.color = Color.white;
+                    GUI.color = new Color(0.3f, 0.7f, 1f);
+                    tabStyle.normal.textColor = Color.white;
                 }
                 else
                 {
-                    GUI.color = new Color(0.7f, 0.5f, 0.1f);
-                    if (GUI.Button(new Rect(leftW - 320f, y + 30, 250, 70), $"구매  {costLabel}", _smallBtn))
-                        TryBuyItem(item);
-                    GUI.color = Color.white;
+                    GUI.color = new Color(0.15f, 0.15f, 0.25f);
+                }
+
+                if (GUI.Button(new Rect(padX + i * tabW, startY, tabW - 5f, 60f), tabs[i], tabStyle))
+                {
+                    shopTab = i;
+                    scroll = Vector2.zero;
                 }
             }
-            GUI.EndScrollView();
-
-            // ── 우측: 타워 소환 (Gacha) ─────────────────────────────
-            float rightX = 1050f;
-            GUI.color = new Color(0.12f, 0.10f, 0.22f, 0.95f);
-            GUI.DrawTexture(new Rect(rightX, startY, 710f, 830f), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            var gachaTitleStyle = new GUIStyle(_label) { fontSize = 38, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            gachaTitleStyle.normal.textColor = Color.yellow;
-            GUI.Label(new Rect(rightX, startY + 15f, 710f, 60f), "🔮  타워 소환", gachaTitleStyle);
+            float contentY = startY + 80f;
+            float contentH = panelH - 80f;
 
-            // 소환 확률 안내
-            var infoStyle = new GUIStyle(_label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
-            infoStyle.normal.textColor = new Color(0.7f, 0.7f, 0.9f);
-            GUI.Label(new Rect(rightX, startY + 75f, 710f, 50f), "기본 확률: R 90% | SR 8% | SSR 1% | SP 1%\n(10회 연속 소환 마지막: SR 80% | SSR 10% | SP 10%)", infoStyle);
-
-            // 소환 버튼
-            ColorBtn(new Color(0.2f, 0.5f, 0.8f), new Rect(rightX + 40f, startY + 140f, 290f, 75f), "1회 소환\n(💎 100)", () => TryPullGacha(false));
-            ColorBtn(new Color(0.6f, 0.2f, 0.7f), new Rect(rightX + 380f, startY + 140f, 290f, 75f), "10회 소환\n(💎 900)", () => TryPullGacha(true));
-
-            // 결과 박스
-            GUI.Box(new Rect(rightX + 40f, startY + 235f, 630f, 560f), "소환 결과", new GUIStyle(GUI.skin.box) { fontSize = 22, fontStyle = FontStyle.Bold });
-
-            var resultStyle = new GUIStyle(_label) { fontSize = 26, richText = true };
-            resultStyle.normal.textColor = Color.white;
-
-            if (gachaResults.Count == 0)
+            if (shopTab == 0)
             {
-                var emptyStyle = new GUIStyle(resultStyle) { alignment = TextAnchor.MiddleCenter };
-                emptyStyle.normal.textColor = Color.gray;
-                GUI.Label(new Rect(rightX + 50f, startY + 270f, 610f, 500f), "소환 버튼을 눌러 타워를 획득하세요!", emptyStyle);
-            }
-            else
-            {
-                float resultStartY = startY + 280f;
-                for (int idx = 0; idx < gachaResults.Count; idx++)
+                // ── [젬 상점] ──────────────────────────────────────────
+                GUI.Box(new Rect(padX, contentY, panelW, contentH), "젬 상점", new GUIStyle(GUI.skin.box) { fontSize = 24, fontStyle = FontStyle.Bold });
+
+                float rowH = 130f;
+                int itemCount = 3;
+                scroll = GUI.BeginScrollView(new Rect(padX + 20f, contentY + 40f, panelW - 40f, contentH - 60f),
+                    scroll, new Rect(0, 0, panelW - 70f, itemCount * (rowH + 10f)));
+
+                for (int i = 0; i < itemCount; i++)
                 {
-                    if (gachaResults.Count > 1)
+                    float y = i * (rowH + 10f);
+                    GUI.color = new Color(0.14f, 0.14f, 0.22f);
+                    GUI.DrawTexture(new Rect(0, y, panelW - 70f, rowH), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+
+                    string title = "";
+                    string desc = "";
+                    int cost = 0;
+                    string productKey = "";
+
+                    if (i == 0)
                     {
-                        int col = idx % 2;
-                        int row = idx / 2;
-                        GUI.Label(new Rect(rightX + 70f + col * 300f, resultStartY + row * 90f, 295f, 70f), gachaResults[idx], resultStyle);
+                        title = "💎 보석 묶음 구매";
+                        desc = "로비 상점에서 사용할 수 있는 프리미엄 보석을 구매합니다. (보석 2,000개 지급)";
+                        cost = 0;
+                        productKey = "gem_pack_01";
+                    }
+                    else if (i == 1)
+                    {
+                        title = "🔋 행동력 100개 충전";
+                        desc = "모험 플레이에 소모되는 행동력을 즉시 충전합니다.";
+                        cost = 100;
+                        productKey = "stamina_charge_01";
                     }
                     else
                     {
-                        var singleResultStyle = new GUIStyle(resultStyle) { alignment = TextAnchor.MiddleCenter };
-                        GUI.Label(new Rect(rightX + 50f, resultStartY + 150f, 610f, 150f), $"🎉 소환 성공! 🎉\n\n{gachaResults[idx]}", singleResultStyle);
+                        title = "📅 월간 특별 패키지";
+                        desc = "풍성한 혜택이 담긴 월간 고효율 성장 패키지 상품입니다.";
+                        cost = 500;
+                        productKey = "monthly_pack_01";
+                    }
+
+                    GUI.Label(new Rect(20, y + 15, 800, 50), title, _label);
+                    GUI.Label(new Rect(20, y + 65, 800, 50), desc, new GUIStyle(_label) { fontSize = 22, normal = { textColor = Color.gray } });
+
+                    bool bought = UserDataManager.Instance?.HasPurchased(productKey) ?? false;
+                    string costLabel = cost > 0 ? $"💎 {cost}" : "무료 충전";
+
+                    if (bought && productKey.Contains("monthly"))
+                    {
+                        GUI.color = Color.gray;
+                        GUI.Button(new Rect(panelW - 380f, y + 30, 280, 70), "구매 완료", _smallBtn);
+                        GUI.color = Color.white;
+                    }
+                    else
+                    {
+                        GUI.color = new Color(0.7f, 0.5f, 0.1f);
+                        if (GUI.Button(new Rect(panelW - 380f, y + 30, 280, 70), $"구매  {costLabel}", _smallBtn))
+                        {
+                            if (cost > 0)
+                            {
+                                bool success = UserDataManager.Instance.SpendGems(cost);
+                                if (success)
+                                {
+                                    UserDataManager.Instance.AddPurchase(productKey, title, 0, cost);
+                                    if (productKey.Contains("stamina"))
+                                    {
+                                        UserDataManager.Instance.AddUpgradePoints(10);
+                                        Debug.Log("[Shop] 행동력 구매 완료!");
+                                    }
+                                    UserDataManager.Instance.Save();
+                                }
+                                else
+                                {
+                                    Debug.LogWarning("[Shop] 보석이 부족합니다.");
+                                }
+                            }
+                            else
+                            {
+                                UserDataManager.Instance.AddCurrency(gems: 2000);
+                                UserDataManager.Instance.AddPurchase(productKey, title, 0, 0);
+                                UserDataManager.Instance.Save();
+                            }
+                        }
+                        GUI.color = Color.white;
                     }
                 }
+                GUI.EndScrollView();
+            }
+            else if (shopTab == 1)
+            {
+                // ── [타워 뽑기] ────────────────────────────────────────
+                GUI.color = new Color(0.12f, 0.10f, 0.22f, 0.95f);
+                GUI.DrawTexture(new Rect(padX, contentY, panelW, contentH), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+
+                var gachaTitleStyle = new GUIStyle(_label) { fontSize = 38, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                gachaTitleStyle.normal.textColor = Color.yellow;
+                GUI.Label(new Rect(padX, contentY + 20f, panelW, 60f), "🔮  타워 소환 (Gacha)", gachaTitleStyle);
+
+                var infoStyle = new GUIStyle(_label) { fontSize = 22, alignment = TextAnchor.MiddleCenter };
+                infoStyle.normal.textColor = new Color(0.7f, 0.7f, 0.9f);
+                GUI.Label(new Rect(padX, contentY + 85f, panelW, 50f), "기본 확률: R 90% | SR 8% | SSR 1% | SP 1%\n(10회 연속 소환 마지막 카드 보증 확률: SR 80% | SSR 10% | SP 10%)", infoStyle);
+
+                ColorBtn(new Color(0.2f, 0.5f, 0.8f), new Rect(padX + 280f, contentY + 160f, 480f, 85f), "1회 소환 (💎 100)", () => TryPullGacha(false));
+                ColorBtn(new Color(0.6f, 0.2f, 0.7f), new Rect(padX + 840f, contentY + 160f, 480f, 85f), "10회 소환 (💎 1000)", () => TryPullGacha(true));
+
+                GUI.Box(new Rect(padX + 80f, contentY + 270f, panelW - 160f, contentH - 290f), "소환 결과", new GUIStyle(GUI.skin.box) { fontSize = 22, fontStyle = FontStyle.Bold });
+
+                var resultStyle = new GUIStyle(_label) { fontSize = 26, richText = true };
+                resultStyle.normal.textColor = Color.white;
+
+                if (gachaResults.Count == 0)
+                {
+                    var emptyStyle = new GUIStyle(resultStyle) { alignment = TextAnchor.MiddleCenter };
+                    emptyStyle.normal.textColor = Color.gray;
+                    GUI.Label(new Rect(padX + 90f, contentY + 310f, panelW - 180f, contentH - 350f), "소환 버튼을 눌러 타워를 획득하세요!", emptyStyle);
+                }
+                else
+                {
+                    float resultStartY = contentY + 320f;
+                    for (int idx = 0; idx < gachaResults.Count; idx++)
+                    {
+                        if (gachaResults.Count > 1)
+                        {
+                            int col = idx % 2;
+                            int row = idx / 2;
+                            GUI.Label(new Rect(padX + 180f + col * 640f, resultStartY + row * 65f, 600f, 60f), gachaResults[idx], resultStyle);
+                        }
+                        else
+                        {
+                            var singleResultStyle = new GUIStyle(resultStyle) { alignment = TextAnchor.MiddleCenter };
+                            GUI.Label(new Rect(padX + 90f, resultStartY + 60f, panelW - 180f, 150f), $"🎉 소환 성공! 🎉\n\n{gachaResults[idx]}", singleResultStyle);
+                        }
+                    }
+                }
+            }
+            else if (shopTab == 2)
+            {
+                // ── [포인트 상점] ───────────────────────────────────────
+                GUI.Box(new Rect(padX, contentY, panelW, contentH), "포인트 상점", new GUIStyle(GUI.skin.box) { fontSize = 24, fontStyle = FontStyle.Bold });
+
+                float rowH = 130f;
+                scroll = GUI.BeginScrollView(new Rect(padX + 20f, contentY + 40f, panelW - 40f, contentH - 60f),
+                    scroll, new Rect(0, 0, panelW - 70f, Mathf.Max(contentH - 60f, allTowers.Count * (rowH + 10f))));
+
+                for (int i = 0; i < allTowers.Count; i++)
+                {
+                    var tower = allTowers[i];
+                    if (tower == null) continue;
+                    float y = i * (rowH + 10f);
+
+                    GUI.color = new Color(0.12f, 0.12f, 0.18f);
+                    GUI.DrawTexture(new Rect(0, y, panelW - 70f, rowH), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+
+                    string rarityTag = tower.rarity == TowerRarity.SP ? "<color=red>[SP]</color>" : 
+                                       tower.rarity == TowerRarity.SSR ? "<color=orange>[SSR]</color>" :
+                                       tower.rarity == TowerRarity.SR ? "<color=cyan>[SR]</color>" : "[R]";
+                    
+                    bool isUnlocked = UserDataManager.Instance?.IsTowerUnlocked(tower.towerId) ?? false;
+                    int towerPt = UserDataManager.Instance != null ? UserDataManager.Instance.GetTowerPoint(tower.towerId) : 1;
+
+                    string statusLabel = isUnlocked ? $"보유 중 (성장 Pt: {towerPt}/7)" : "<color=yellow>미획득</color>";
+
+                    GUI.Label(new Rect(20, y + 15, 600, 50), $"{rarityTag} {tower.towerName}", _label);
+                    GUI.Label(new Rect(20, y + 65, 600, 50), $"상태: {statusLabel}", new GUIStyle(_label) { fontSize = 22, richText = true });
+
+                    int costPoints = 10;
+                    bool canAfford = UserDataManager.Instance != null && UserDataManager.Instance.PlayerShopPoints >= costPoints;
+
+                    if (isUnlocked && towerPt >= 7)
+                    {
+                        GUI.color = Color.gray;
+                        GUI.Button(new Rect(panelW - 380f, y + 30, 280, 70), "성장 완료 (최대 Pt)", _smallBtn);
+                        GUI.color = Color.white;
+                    }
+                    else
+                    {
+                        string btnLabel = isUnlocked ? $"성장 Pt +1 (🪙 {costPoints})" : $"타워 구매 (🪙 {costPoints})";
+                        GUI.color = canAfford ? new Color(0.2f, 0.6f, 0.4f) : new Color(0.3f, 0.3f, 0.3f);
+                        if (GUI.Button(new Rect(panelW - 380f, y + 30, 280, 70), btnLabel, _smallBtn))
+                        {
+                            if (canAfford)
+                            {
+                                TryBuyTowerWithPoints(tower, costPoints);
+                            }
+                            else
+                            {
+                                Debug.LogWarning("[Point Shop] 상점 포인트가 부족합니다.");
+                            }
+                        }
+                        GUI.color = Color.white;
+                    }
+                }
+                GUI.EndScrollView();
             }
 
             BackBtn();
@@ -612,7 +754,7 @@ namespace TDF.Runtime.UI
                 return;
             }
 
-            int cost = isTen ? 900 : 100;
+            int cost = isTen ? 1000 : 100;
             bool success = UserDataManager.Instance.SpendGems(cost);
             if (!success)
             {
@@ -703,6 +845,28 @@ namespace TDF.Runtime.UI
                     UserDataManager.Instance.AddShopPoints(shopPointsReward);
                     gachaResults.Add($"[{rarityTag}] {rolledTower.towerName} <color=magenta>(🪙+{shopPointsReward})</color>");
                 }
+            }
+        }
+
+        void TryBuyTowerWithPoints(TowerData tower, int cost)
+        {
+            if (UserDataManager.Instance == null) return;
+            if (UserDataManager.Instance.PlayerShopPoints < cost) return;
+
+            // 포인트 차감
+            UserDataManager.Instance.AddShopPoints(-cost);
+
+            bool isUnlocked = UserDataManager.Instance.IsTowerUnlocked(tower.towerId);
+            if (!isUnlocked)
+            {
+                UserDataManager.Instance.UnlockTower(tower.towerId, TowerUnlockSource.Purchase, "PointShop");
+                Debug.Log($"[Point Shop] 상점 포인트로 타워 구매 성공: {tower.towerName}");
+            }
+            else
+            {
+                int currentPt = UserDataManager.Instance.GetTowerPoint(tower.towerId);
+                UserDataManager.Instance.SetTowerPoint(tower.towerId, currentPt + 1);
+                Debug.Log($"[Point Shop] 상점 포인트로 타워 성장 성공: {tower.towerName} (Pt {currentPt}→{currentPt + 1})");
             }
         }
 

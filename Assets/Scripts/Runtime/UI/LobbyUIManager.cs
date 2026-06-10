@@ -205,6 +205,7 @@ namespace TDF.Runtime.UI
             GUI.DrawTexture(new Rect(0, 0, 1920, 110), Texture2D.whiteTexture);
             GUI.color = Color.white;
             GUI.Label(new Rect(0, 0, 1920, 110), text, _title);
+            CurrencyBar();
         }
 
         void CurrencyBar()

@@ -458,6 +458,17 @@ namespace TDF.Runtime.Managers
 
         public void StartGameAt(int worldIndex, int stageIndex)
         {
+            // 스테이지 입장 시 행동력 10 소모 검증
+            if (UserDataManager.Instance != null)
+            {
+                bool hasStamina = UserDataManager.Instance.SpendStamina(10);
+                if (!hasStamina)
+                {
+                    Debug.LogWarning("[LobbyManager] 행동력이 부족하여 스테이지에 입장할 수 없습니다. (필요: 10)");
+                    return;
+                }
+            }
+
 #if UNITY_EDITOR
             if (worlds == null || worlds.Count == 0)
             {

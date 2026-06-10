@@ -210,8 +210,20 @@ namespace TDF.Runtime.UI
         void CurrencyBar()
         {
             if (UserDataManager.Instance == null) return;
-            GUI.Label(new Rect(1280, 0, 610, 110),
-                $"💎 {UserDataManager.Instance.PlayerGems}  |  🪙 {UserDataManager.Instance.PlayerShopPoints}", _bar);
+            string username = BackendManager.Instance != null && BackendManager.Instance.IsSignedIn 
+                ? (BackendManager.Instance.PlayerId.Length > 8 ? BackendManager.Instance.PlayerId.Substring(0, 8) + "..." : BackendManager.Instance.PlayerId) 
+                : "Guest";
+            
+            // 행동력 자연 회복 강제 업데이트
+            UserDataManager.Instance.UpdateStaminaRecovery();
+            
+            int stamina = UserDataManager.Instance.CurrentStamina;
+            int maxStamina = UserDataManager.MAX_STAMINA;
+            int gems = UserDataManager.Instance.PlayerGems;
+            int shopPoints = UserDataManager.Instance.PlayerShopPoints;
+
+            GUI.Label(new Rect(300, 0, 1590, 110),
+                $"👤 {username}   |   ⚡ {stamina}/{maxStamina}   |   💎 {gems}   |   🪙 {shopPoints}", _bar);
         }
 
         bool BackBtn()
@@ -310,6 +322,18 @@ namespace TDF.Runtime.UI
                 Debug.LogError("[LobbyUIManager] 유효하지 않은 월드 인덱스입니다.");
                 return;
             }
+
+            // 스테이지 입장 시 행동력 10 소모 검증
+            if (UserDataManager.Instance != null)
+            {
+                bool hasStamina = UserDataManager.Instance.SpendStamina(10);
+                if (!hasStamina)
+                {
+                    Debug.LogWarning("[LobbyUIManager] 행동력이 부족하여 스테이지에 입장할 수 없습니다. (필요: 10)");
+                    return;
+                }
+            }
+
             GameManager.staticTestCampaign   = worlds[wIdx];
             GameManager.staticTestStageIndex = sIdx;
             
@@ -599,8 +623,8 @@ namespace TDF.Runtime.UI
                                     UserDataManager.Instance.AddPurchase(productKey, title, 0, cost);
                                     if (productKey.Contains("stamina"))
                                     {
-                                        UserDataManager.Instance.AddUpgradePoints(10);
-                                        Debug.Log("[Shop] 행동력 구매 완료!");
+                                        UserDataManager.Instance.AddStamina(100);
+                                        Debug.Log("[Shop] 행동력 100 충전 완료!");
                                     }
                                     UserDataManager.Instance.Save();
                                 }

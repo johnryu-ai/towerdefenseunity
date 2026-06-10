@@ -57,6 +57,20 @@ namespace TDF.Runtime.Managers
             }
         }
 
+        private float staminaTimer = 0f;
+        private void Update()
+        {
+            if (BackendManager.Instance != null && BackendManager.Instance.IsSignedIn)
+            {
+                staminaTimer += Time.deltaTime;
+                if (staminaTimer >= 10f) // 10초마다 회복 여부 체크
+                {
+                    staminaTimer = 0f;
+                    UpdateStaminaRecovery();
+                }
+            }
+        }
+
         private void OnDestroy()
         {
             if (BackendManager.Instance != null)
@@ -149,18 +163,20 @@ namespace TDF.Runtime.Managers
                 {
                     var loadedData = await Unity.Services.CloudSave.CloudSaveService.Instance.Data.Player.LoadAsync(keys);
 
-                    if (loadedData.TryGetValue("UserSaveData", out var cloudJson))
-                    {
-                        saveData = JsonUtility.FromJson<UserSaveData>(cloudJson.Value.GetAsString());
-                        Debug.Log("[UserDataManager] 기존 유저 데이터 로드 완료.");
-                    }
-                    else
-                    {
-                        saveData = new UserSaveData();
-                        Debug.Log("[UserDataManager] 신규 유저입니다. 데이터를 초기화합니다.");
-                        Save(); 
-                    }
-                    return; // 성공 시 함수 종료
+                     if (loadedData.TryGetValue("UserSaveData", out var cloudJson))
+                     {
+                         saveData = JsonUtility.FromJson<UserSaveData>(cloudJson.Value.GetAsString());
+                         Debug.Log("[UserDataManager] 기존 유저 데이터 로드 완료.");
+                         UpdateStaminaRecovery();
+                     }
+                     else
+                     {
+                         saveData = new UserSaveData();
+                         saveData.lastStaminaUpdateAt = DateTime.Now.ToString("o");
+                         Debug.Log("[UserDataManager] 신규 유저입니다. 데이터를 초기화합니다.");
+                         Save(); 
+                     }
+                     return; // 성공 시 함수 종료
                 }
                 catch (Exception e)
                 {
@@ -525,6 +541,78 @@ namespace TDF.Runtime.Managers
             else
             {
                 Debug.LogWarning($"[UserDataManager] 언락되지 않은 타워 {towerId}의 포인트를 설정할 수 없습니다.");
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 행동력 (Stamina) - 1시간에 10회복 (6분에 1회복), 최대 200
+        // ══════════════════════════════════════════════════════════════════
+
+        public int CurrentStamina => saveData.stamina;
+        public const int MAX_STAMINA = 200;
+
+        /// <summary>행동력 소비를 처리합니다. 부족하면 false를 리턴합니다.</summary>
+        public bool SpendStamina(int amount)
+        {
+            UpdateStaminaRecovery(); // 소모 전 회복분 업데이트
+            if (saveData.stamina < amount)
+            {
+                Debug.LogWarning($"[UserDataManager] 행동력이 부족합니다. 현재: {saveData.stamina}, 필요: {amount}");
+                return false;
+            }
+            saveData.stamina -= amount;
+            Save();
+            Debug.Log($"[UserDataManager] 행동력 소모: -{amount}. 현재: {saveData.stamina}/{MAX_STAMINA}");
+            return true;
+        }
+
+        /// <summary>행동력을 임의 충전(예: 상점)합니다.</summary>
+        public void AddStamina(int amount)
+        {
+            UpdateStaminaRecovery(); // 충전 전 회복분 업데이트
+            saveData.stamina = Mathf.Min(MAX_STAMINA, saveData.stamina + amount);
+            Save();
+            Debug.Log($"[UserDataManager] 행동력 충전: +{amount}. 현재: {saveData.stamina}/{MAX_STAMINA}");
+        }
+
+        /// <summary>현재 시간과 이전 저장 시간을 비교하여 경과 시간에 따른 행동력을 자연 복구합니다.</summary>
+        public void UpdateStaminaRecovery()
+        {
+            if (string.IsNullOrEmpty(saveData.lastStaminaUpdateAt))
+            {
+                saveData.lastStaminaUpdateAt = DateTime.Now.ToString("o");
+                Save();
+                return;
+            }
+
+            if (saveData.stamina >= MAX_STAMINA)
+            {
+                // 이미 행동력이 최대치인 경우 타임스탬프만 최신으로 유지
+                saveData.lastStaminaUpdateAt = DateTime.Now.ToString("o");
+                return;
+            }
+
+            if (DateTime.TryParse(saveData.lastStaminaUpdateAt, out DateTime lastUpdate))
+            {
+                TimeSpan elapsed = DateTime.Now - lastUpdate;
+                double secondsElapsed = elapsed.TotalSeconds;
+
+                // 6분에 1씩 회복 (360초에 1회복)
+                int recoveryAmount = (int)(secondsElapsed / 360.0);
+                if (recoveryAmount > 0)
+                {
+                    saveData.stamina = Mathf.Min(MAX_STAMINA, saveData.stamina + recoveryAmount);
+                    // 잔여 시간을 반영하여 타임스탬프 설정 (누수 방지)
+                    DateTime nextRecoveryTime = lastUpdate.AddSeconds(recoveryAmount * 360.0);
+                    saveData.lastStaminaUpdateAt = nextRecoveryTime.ToString("o");
+                    Save();
+                    Debug.Log($"[UserDataManager] 행동력 자연 회복: +{recoveryAmount}. 현재: {saveData.stamina}/{MAX_STAMINA}");
+                }
+            }
+            else
+            {
+                saveData.lastStaminaUpdateAt = DateTime.Now.ToString("o");
+                Save();
             }
         }
 

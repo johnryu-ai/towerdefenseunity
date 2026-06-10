@@ -133,6 +133,8 @@ namespace TDF.Core.Data
         public int  playerGems = 0;   // 크리스탈 (프리미엄 재화 / 업적 보상)
         public int  upgradePoints = 0; // 업그레이드 포인트 (타워 업그레이드용)
         public int  shopPoints = 0;    // 상점 포인트 (중복 타워 환전 포인트)
+        public int  stamina = 200;     // 현재 행동력 (기본 최대치 200으로 시작)
+        public string lastStaminaUpdateAt; // 마지막 행동력 자동 회복 시각 (ISO string)
 
         public string lastSavedAt;
     }
